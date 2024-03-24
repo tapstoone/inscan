@@ -178,9 +178,9 @@ fn decode_arc20(inscription: Inscription)->Result<ciborium::Value>{
     }
     let body = inscription.body().ok_or_else(|| BRC20Error::ContentBodyNull)?;
     let body_string = body.to_vec();
-    println!("{:?}", body_string);
+    // println!("{:?}", body_string);
     let payload_value: ciborium::Value = ciborium::de::from_reader(&body_string[..])?; //TODO: get the diagnostic notation result
-    println!("\n>>> atomicals inscription decoded: {:?}", payload_value);
+    // println!("\n>>> atomicals inscription decoded: {:?}", payload_value);
     Ok(payload_value)
     
 }
@@ -259,7 +259,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
         // ordinals
         "ord-nft" => {
             println!("ord-nft...");
-            let ordinals = ord::ParsedEnvelope::from_transaction(&rawtx);
+            let ordinals = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             if compact {
                 let result = Box::new(CompactOutput {
                     inscriptions: ordinals
@@ -282,7 +282,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
         }
 
         "brc20" => {
-            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx);
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
@@ -329,9 +329,8 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
 
         // ===Atomicals===
         "arc20" => {
-            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx);
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"atom");
             // let raw_envelopes = ord::RawEnvelope::from_transaction(&rawtx);
-            println!("{:?}", envelopes);
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
@@ -357,14 +356,14 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
 
 
 
-pub fn run_txs(rpc: &Client, txids: &String, protocols_str: &String) {
+pub fn run_txs(rpc: &Client, txids: &String, protocols: &str) {
     let txs: Vec<&str> = txids.split(',').collect();
-    let protocols: Vec<&str> = protocols_str.split(',').collect();
+    // let protocols: Vec<&str> = protocols_str.split(',').collect();
     for item in txs {
         let id = Txid::from_str(item).unwrap();
         let rawtx = rpc.get_raw_transaction(&id, None).unwrap();
 
-        let ordinals = ord::ParsedEnvelope::from_transaction(&rawtx);
+        let ordinals = ord::ParsedEnvelope::from_transaction(&rawtx, protocols.as_bytes());
         println!("\n{:?}: {:?}", item, ordinals);
 
         // for protocol in &protos{
@@ -381,7 +380,7 @@ pub fn run_txs(rpc: &Client, txids: &String, protocols_str: &String) {
     }
 }
 
-pub fn run_blocks(rpc: &Client, block_number: u64) {
+pub fn run_blocks(rpc: &Client, block_number: u64, protocol: &str) {
     let block_hash = rpc.get_block_hash(block_number).unwrap();
 
     // get the txs
@@ -391,7 +390,6 @@ pub fn run_blocks(rpc: &Client, block_number: u64) {
 
     for tx in &block_data.txdata {
         let txid = tx.txid();
-        let protocol = "arc20";
         decode_tx(rpc, &txid, protocol)
     }
 }

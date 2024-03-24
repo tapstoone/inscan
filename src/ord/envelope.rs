@@ -99,8 +99,8 @@ impl From<RawEnvelope> for ParsedEnvelope {
 }
 
 impl ParsedEnvelope {
-  pub(crate) fn from_transaction(transaction: &Transaction) -> Vec<Self> {
-    let aa = RawEnvelope::from_transaction(transaction);
+  pub(crate) fn from_transaction(transaction: &Transaction, protocol_id:&[u8]) -> Vec<Self> {
+    let aa = RawEnvelope::from_transaction(transaction, protocol_id);
     let bb = aa.into_iter();
     let cc = bb.map(|envelope| envelope.into());
     let dd = cc.collect();
@@ -113,12 +113,12 @@ impl ParsedEnvelope {
 }
 
 impl RawEnvelope {
-  pub(crate) fn from_transaction(transaction: &Transaction) -> Vec<Self> {
+  pub(crate) fn from_transaction(transaction: &Transaction, protocol_id: &[u8]) -> Vec<Self> {
     let mut envelopes = Vec::new();
 
     for (i, input) in transaction.input.iter().enumerate() {
       if let Some(tapscript) = input.witness.tapscript() {
-        if let Ok(input_envelopes) = Self::from_tapscript(tapscript, i) {
+        if let Ok(input_envelopes) = Self::from_tapscript(tapscript, i, protocol_id) {
           envelopes.extend(input_envelopes);
         }
       }
@@ -127,7 +127,7 @@ impl RawEnvelope {
     envelopes
   }
 
-  fn from_tapscript(tapscript: &Script, input: usize) -> Result<Vec<Self>> {
+  fn from_tapscript(tapscript: &Script, input: usize, protocol_id: &[u8]) -> Result<Vec<Self>> {
     let mut envelopes = Vec::new();
     // print!("\nfrom_tapscript->envelopes: {:?}", envelopes);
     // print!("\nfrom_tapscript->tapscript: {:?}", tapscript);
@@ -140,7 +140,7 @@ impl RawEnvelope {
       // println!("\nfrom_tapscript->instruction: {:?}", instruction);
       if instruction == PushBytes((&[]).into()) { //check the start flag: OP_0/OP_FALSE, why this if condition not loop next after == PushBytes((&[]) iter??
         let (stutter, envelope) =
-          Self::from_instructions(&mut instructions, input, envelopes.len(), stuttered)?;
+          Self::from_instructions(&mut instructions, input, envelopes.len(), stuttered, protocol_id)?;
         if let Some(envelope) = envelope {
           envelopes.push(envelope);
         } else {
@@ -181,6 +181,7 @@ impl RawEnvelope {
     input: usize,
     offset: usize,
     stutter: bool,
+    protocol_id: &[u8]
   ) -> Result<(bool, Option<Self>)> {
     // println!("\nfrom_instructions->instructions-1:{:?}", instructions);
     if !Self::accept(instructions, Op(opcodes::all::OP_IF))? { // check if this OP is equal to OP_IF, if no return None, which means this is not an ordinals
@@ -188,7 +189,9 @@ impl RawEnvelope {
       return Ok((stutter, None));
     }
 
-    if !Self::accept(instructions, PushBytes((b"atom").into()))? { // check if this PushBytes is equal ord, if not return None, which means this is not an ordinals
+    let push: &bitcoin::script::PushBytes = protocol_id.try_into().unwrap();
+    if !Self::accept(instructions, PushBytes(push.into()))? {
+    // if !Self::accept(instructions, PushBytes((b"aaa").into()))? { // check if this PushBytes is equal ord, if not return None, which means this is not an ordinals
       let stutter = instructions.peek() == Some(&Ok(PushBytes((&[]).into())));
       return Ok((stutter, None));
     }
@@ -203,8 +206,11 @@ impl RawEnvelope {
         None => return Ok((false, None)),
         Some(Op(opcodes::all::OP_ENDIF)) => {
              // for arc20
-          payload.insert(0, vec![1]);
-          payload.insert(2, vec![]);
+             if protocol_id == b"atom" {
+              payload.insert(0, vec![1]);
+              payload.insert(2, vec![]);
+             }
+
           return Ok((
             false,
             Some(Envelope {
@@ -331,7 +337,7 @@ mod tests {
         })
         .collect(),
       output: Vec::new(),
-    })
+    }, b"brc-20")
   }
 
   #[test]

@@ -51,7 +51,7 @@ fn main() {
         Some(cli::Commands::Blocks { heights, protocols, output }) => {
             println!("Extract {protocols:?} from blocks {heights:?} ...");
 
-            scan::run_blocks(&rpc,heights.clone());
+            scan::run_blocks(&rpc,heights.clone(), &protocols);
             // 
         }
         Some(cli::Commands::Txs { txids, protocols, output }) => {
