@@ -55,7 +55,7 @@ fn main() {
             // 
         }
         Some(cli::Commands::Txs { txids, protocols, output }) => {
-            println!("Extract {protocols:?} from blocks {txids:?} ...");
+            println!("Extract {protocols:?} from txs {txids:?} ...");
             let tx = Txid::from_str(txids).unwrap();
             scan::decode_tx(&rpc, &tx, &protocols);
             // let rawtx = rpc.get_raw_transaction(&id, None).unwrap();
