@@ -118,6 +118,30 @@ fn decode_brc20(inscription: Inscription) ->Result<String> {
     }
 }
 
+fn decode_sns(inscription: Inscription) ->Result<String> {
+    let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
+    if content_type != "text/plain"
+        && content_type != "text/plain;charset=utf-8"
+        && content_type != "text/plain;charset=UTF-8"
+        && content_type != "application/json"
+        && !content_type.starts_with("text/plain;")
+    {
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+
+    let content_body = std::str::from_utf8(inscription.body().ok_or_else(|| BRC20Error::ContentBodyNull)?)?;
+    let value = parse_json(content_body).ok_or_else(|| BRC20Error::ContentBodyNotJson)?;
+    // TODO: check if this is brc20
+    // Check if the key exists and if it is equal to "brc-20"
+    let protocol = value.get("p").ok_or_else(|| BRC20Error::ContentBodyNotJson)?;
+    if protocol == "sns" {
+        let brc20_event = serde_json::to_string(&value).map_err(|err| Error::from(err))?;
+        return Ok(brc20_event);
+    } else {
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+}
+
 // https://github.com/BennyTheDev/tap-protocol-specs
 fn decode_tap(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
@@ -156,13 +180,8 @@ fn decode_bitmap(inscription: Inscription) ->Result<String> {
     }
 
     let content_body = std::str::from_utf8(inscription.body().ok_or_else(|| BRC20Error::ContentBodyNull)?)?;
-    let value = parse_json(content_body).ok_or_else(|| BRC20Error::ContentBodyNotJson)?;
-    // TODO: check if this is brc20
-    // Check if the key exists and if it is equal to "brc-20"
-    let protocol = value.get("p").ok_or_else(|| BRC20Error::ContentBodyNotJson)?;
-    if protocol == "tap" {
-        let brc20_event = serde_json::to_string(&value).map_err(|err| Error::from(err))?;
-        return Ok(brc20_event);
+    if content_body.ends_with(".bitmap") {
+        return Ok(content_body.to_string());
     } else {
         return Err(BRC20Error::ContentTypeNotValid.into());
     }
@@ -278,7 +297,15 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
         }
 
         "bitmap" => {
-            println!("bitmap...");
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
+            for item in envelopes.iter() {
+                // let body = item.clone().payload.body.unwrap();
+                let inscription = item.payload.clone();
+                let event = match decode_bitmap(inscription) {
+                    std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
+                    Err(err) =>{},
+                } ;
+            }
         }
 
         "brc20" => {
@@ -323,8 +350,28 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             println!("brc420...");
         }
 
-        "cbrc20" => {
-            println!("cbrc20...");
+        "sns" =>{
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
+            for item in envelopes.iter() {
+                // let body = item.clone().payload.body.unwrap();
+                let inscription = item.payload.clone();
+                let event = match decode_sns(inscription) {
+                    std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
+                    Err(err) =>{},
+                } ;
+            }
+        }
+
+        "tap" => {
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
+            for item in envelopes.iter() {
+                // let body = item.clone().payload.body.unwrap();
+                let inscription = item.payload.clone();
+                let event = match decode_tap(inscription) {
+                    std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
+                    Err(err) =>{},
+                };
+            }
         }
 
         // ===Atomicals===

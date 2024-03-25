@@ -3,24 +3,25 @@
 A [Rust](https://www.rust-lang.org/) tool that can extract inscription data (e.g. ordinals, arc20, brc20, runes, src20...) from blocks and transactions on [Bitcoin](https://bitcoin.org/).
 
 ## Supported Protocols
-- Ordinals
-    - [ ] NFT
-    - [x] BRC20
-    - [ ] BRC100
-    - [ ] BRC420
-    - [ ] bitmap
-    - [ ] SNS
-    - [x] Tap
-- Atomicals
-    - [ ] ARC20
-    - [ ] ARC721
-- Stamps
-    - [ ] SRC20
+- **Ordinals**
+    - [ ] Ordinals NFT: ✔️`mint`, ✖️`transfer`
+    - [x] BRC20: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
+    - [ ] BRC100: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
+    - [ ] BRC420: 
+    - [x] Bitmap: ✔️`mint`, ✖️`transfer`
+    - [x] SNS: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
+    - [x] Tap: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
+- **Atomicals**
+    - [x] ARC20: ✔️`atomical-create-ft`, ✔️`dstributed-mint`, ✔️`ft-color-split`, ✖️`ft-color-regular`
+    - [ ] ARC721: 
+- **Stamps**
+    - [ ] SRC20: `deploy`, `mint`, `transfer`
     - [ ] SRC721
-- Runes
+- **Runes**
     - [ ] Runestone
     - [ ] Rune Alpha
 
+> Note: it's only scan(decode) protocols stored in raw transaction data, not include the whole indexing data. So the `common` transaction depend on indexing data which marked as `✖️` will not be included.
 
 ## Install
 ```
@@ -58,7 +59,9 @@ cargo build --release
     ```
 
 ## TODO
-- [ ] speed up: iterator each txs of block and check which protocol this tx is.
+- [ ] Indexer: add data indxer for each protocol to identify the invalid event and support transfer event
+- [ ] API: 
+- [ ] Optimize: iterator each txs of block and check which protocol this tx is.
 
 ## Reference
 - https://github.com/ordinals/ord
