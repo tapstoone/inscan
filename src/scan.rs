@@ -118,6 +118,30 @@ fn decode_brc20(inscription: Inscription) ->Result<String> {
     }
 }
 
+fn decode_brc100(inscription: Inscription) ->Result<String> {
+    let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
+    if content_type != "text/plain"
+        && content_type != "text/plain;charset=utf-8"
+        && content_type != "text/plain;charset=UTF-8"
+        && content_type != "application/json"
+        && !content_type.starts_with("text/plain;")
+    {
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+
+    let content_body = std::str::from_utf8(inscription.body().ok_or_else(|| BRC20Error::ContentBodyNull)?)?;
+    let value = parse_json(content_body).ok_or_else(|| BRC20Error::ContentBodyNotJson)?;
+    // TODO: check if this is brc20
+    // Check if the key exists and if it is equal to "brc-20"
+    let protocol = value.get("p").ok_or_else(|| BRC20Error::ContentBodyNotJson)?;
+    if protocol == "BRC-100" || protocol == "BRC-101" || protocol == "BRC-102" {
+        let brc20_event = serde_json::to_string(&value).map_err(|err| Error::from(err))?;
+        return Ok(brc20_event);
+    } else {
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+}
+
 fn decode_sns(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
@@ -317,33 +341,19 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 } ;
-                // match result{
-                //     Some(r) => println!("{:?}", r),
-                //     _ => {}
-                // }
-                // match brc20_check(inscription) {
-                //     std::result::Result::Ok(json) => println!("JSON: {}", json),
-                //     Err(e) => println!("Error: {}", e),
-                // }
             }
-
-            // if compact {
-            //     let result = Box::new(CompactOutput {
-            //       inscriptions: ordinals
-            //         .clone()
-            //         .into_iter()
-            //         .map(|inscription| inscription.payload.try_into())
-            //         .collect::<Result<Vec<CompactInscription>>>().unwrap(),
-            //     });
-            //     println!("\n{:?}: {:?}", txid, result);
-
-            // } else {
-            // let result = Box::new(RawOutput { inscriptions:ordinals });
-            // };
         }
 
         "brc100" => {
-            println!("brc100...");
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
+            for item in envelopes.iter() {
+                // let body = item.clone().payload.body.unwrap();
+                let inscription = item.payload.clone();
+                let event = match decode_brc100(inscription) {
+                    std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
+                    Err(err) =>{},
+                } ;
+            }
         }
 
         "brc420" => {
