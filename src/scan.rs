@@ -14,6 +14,7 @@ use {
     },
     thiserror,
     ciborium,
+    base64
 };
 
 // type Result<T = (), E = Error> = std::result::Result<T, E>;
@@ -94,7 +95,7 @@ enum BRC20Error{
 }
 
 // 
-fn decode_brc20(inscription: Inscription) ->Result<String> {
+fn decode_ord_brc20(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
         && content_type != "text/plain;charset=utf-8"
@@ -118,7 +119,7 @@ fn decode_brc20(inscription: Inscription) ->Result<String> {
     }
 }
 
-fn decode_brc100(inscription: Inscription) ->Result<String> {
+fn decode_ord_brc100(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
         && content_type != "text/plain;charset=utf-8"
@@ -142,7 +143,7 @@ fn decode_brc100(inscription: Inscription) ->Result<String> {
     }
 }
 
-fn decode_brc420(inscription: Inscription) ->Result<String> {
+fn decode_ord_brc420(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
         && content_type != "text/plain;charset=utf-8"
@@ -171,7 +172,7 @@ fn decode_brc420(inscription: Inscription) ->Result<String> {
     }
 }
 
-fn decode_sns(inscription: Inscription) ->Result<String> {
+fn decode_ord_sns(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
         && content_type != "text/plain;charset=utf-8"
@@ -196,7 +197,7 @@ fn decode_sns(inscription: Inscription) ->Result<String> {
 }
 
 // https://github.com/BennyTheDev/tap-protocol-specs
-fn decode_tap(inscription: Inscription) ->Result<String> {
+fn decode_ord_tap(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
         && content_type != "text/plain;charset=utf-8"
@@ -221,7 +222,7 @@ fn decode_tap(inscription: Inscription) ->Result<String> {
 }
 
 //TODO nft transfer is bind with ordinals number, not the nft self?
-fn decode_bitmap(inscription: Inscription) ->Result<String> {
+fn decode_ord_bitmap(inscription: Inscription) ->Result<String> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
         && content_type != "text/plain;charset=utf-8"
@@ -240,10 +241,12 @@ fn decode_bitmap(inscription: Inscription) ->Result<String> {
     }
 }
 
-fn decode_arc20(inscription: Inscription)->Result<ciborium::Value>{
+fn decode_atom_arc20(inscription: Inscription)->Result<ciborium::Value>{
     let op = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
-    if op != "dmt" //TODO: add other op
-        && op != "dft"
+    println!("operation: {:?}", op);
+    if op != "dft" //TODO: add other op
+        && op != "ft"
+        && op != "dmt"
         && op != "y"
     {
         return Err(BRC20Error::ContentTypeNotValid.into());
@@ -252,74 +255,124 @@ fn decode_arc20(inscription: Inscription)->Result<ciborium::Value>{
     let body_string = body.to_vec();
     // println!("{:?}", body_string);
     let payload_value: ciborium::Value = ciborium::de::from_reader(&body_string[..])?; //TODO: get the diagnostic notation result
-    // println!("\n>>> atomicals inscription decoded: {:?}", payload_value);
+    // let temp = payload_value.as_map().unwrap();
+    // println!("\n>>> atomicals inscription decoded: {:?}", temp);
     Ok(payload_value)
     
 }
 
-
-
-/// should return Option instead Result -> Match or None
-fn brc20_check(inscription: Inscription) {
-    let content_type = inscription.content_type();
-    match content_type {
-        Some(content_type) => {
-            // println!("content_type: {content_type:?}");
-            if content_type != "text/plain"
-                && content_type != "text/plain;charset=utf-8"
-                && content_type != "text/plain;charset=UTF-8"
-                && content_type != "application/json"
-                && !content_type.starts_with("text/plain;")
-            {
-                // return Err("Unsupport content type");
-                // return None;
-                // println!("content_type: {content_type:?}");
-            }
-        }
-        None => {
-            println!("content_type: {content_type:?}");
-            // return Some("aaa".to_string());
-        }
+fn cbor_into_string(cbor: ciborium::Value) -> Option<String> {
+    match cbor {
+        ciborium::Value::Text(string) => Some(string),
+        _ => None,
     }
-
-    let content_body = std::str::from_utf8(inscription.body().unwrap());
-    match content_body {
-        std::result::Result::Ok(c) => {
-            let value = parse_json(c);
-            match value {
-                Some(v) => {
-                    // TODO: check if this is brc20
-                    // Check if the key exists and if it is equal to "brc-20"
-                    if let Some(value) = v.get("p") {
-                        if value == "brc-20" {
-                            println!("{:?}", v);
-                        } else {
-                        }
-                    } else {
-                    }
-                }
-                None => {}
-            }
-        }
-        Err(err) => println!("{:?}", err),
-    }
-
-    // let json_value: Value = serde_json::from_str(content_body)?;
-    // if let Some(protocol) = json_value.get("p"){
-    //     if protocol == "brc-20" {
-    //         println!("Key 'key2' exists and its value is 'brc-20'");
-    //     } else {
-    //         println!("Key 'key2' exists but its value is not 'brc-20'");
-    //     }
-    // } else {
-    //     println!("Key 'key2' does not exist");
-    // };
-
-    // let json_string = serde_json::to_string(&json_value)?;
-
-    // Ok(json_string)
 }
 
+fn cbor_to_json(cbor: ciborium::Value) -> serde_json::Value {
+    match cbor {
+        ciborium::Value::Null => serde_json::Value::Null,
+        ciborium::Value::Bool(boolean) => serde_json::Value::Bool(boolean),
+        ciborium::Value::Text(string) => serde_json::Value::String(string),
+        ciborium::Value::Integer(int) => serde_json::Value::Number({
+            let int: i128 = int.into();
+            if let std::result::Result::Ok(int) = u64::try_from(int) {
+                serde_json::Number::from(int)
+            } else if let std::result::Result::Ok(int) = i64::try_from(int) {
+                serde_json::Number::from(int)
+            } else {
+                serde_json::Number::from_f64(int as f64).unwrap()
+            }
+        }),
+        ciborium::Value::Float(float) => serde_json::Value::Number(serde_json::Number::from_f64(float).unwrap()),
+        ciborium::Value::Array(vec) => serde_json::Value::Array(vec.into_iter().map(cbor_to_json).collect()),
+        ciborium::Value::Map(map) => serde_json::Value::Object(map.into_iter().map(|(k, v)| (cbor_into_string(k).unwrap(), cbor_to_json(v))).collect()),
+        ciborium::Value::Bytes(byte) => serde_json::Value::String(base64::encode(byte)),
+        ciborium::Value::Tag(_, _) => unimplemented!(),
+        _ => unimplemented!(),
+    }
+}
+
+// TODO:  atom should be decoded in one place, and let the application decide which one to use
+fn decode_atom_relam(inscription: Inscription)->Result<String>{
+    let op = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
+    println!("operation: {:?}", op);
+    if op != "nft" //TODO: add other op
+    {
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+    let body = inscription.body().ok_or_else(|| BRC20Error::ContentBodyNull)?;
+    let body_string = body.to_vec();
+    // println!("{:?}", body_string);
+    let payload_value: ciborium::Value = ciborium::de::from_reader(&body_string[..])?; //TODO: get the diagnostic notation result
+    // println!("\n>>> atomicals ciborium::Value: {:?}", payload_value);
+    let jsons = cbor_to_json(payload_value);
+    // check if request_realm and request_subrealm in keys
+    let request_realm = &jsons["args"]["request_realm"];
+    let request_subrealm = &jsons["args"]["request_subrealm"];
+    if request_realm.is_null() && request_subrealm.is_null() {
+        Err(BRC20Error::ContentTypeNotValid.into())
+    }
+    else{
+        Ok(jsons.to_string())
+    }
+    
+    // println!("\n>>> atomicals inscription decoded: {:?}", jsons.to_string());
+    // let temp = payload_value.as_map().unwrap();
+    // println!("\n>>> atomicals inscription decoded: {:?}", temp);
+    
+}
+
+
+fn decode_atom_nft(inscription: Inscription)->Result<String>{
+    let op = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
+    if op != "nft" //TODO: add other op
+    {
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+    let body = inscription.body().ok_or_else(|| BRC20Error::ContentBodyNull)?;
+    let body_string = body.to_vec();
+    // println!("{:?}", body_string);
+    let payload_value: ciborium::Value = ciborium::de::from_reader(&body_string[..])?; //TODO: get the diagnostic notation result
+    // println!("\n>>> atomicals ciborium::Value: {:?}", payload_value);
+    let jsons = cbor_to_json(payload_value);
+    // check if request_realm and request_subrealm in keys
+    let request_realm = &jsons["args"]["request_realm"];
+    let request_subrealm = &jsons["args"]["request_subrealm"];
+    if !request_realm.is_null() || !request_subrealm.is_null() {
+        Err(BRC20Error::ContentTypeNotValid.into())
+    }
+    else{
+        Ok(jsons.to_string())
+    }
+    
+}
+
+fn decode_atom_others(inscription: Inscription)->Result<String>{
+    let op = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
+    if op != "mod"
+       && op != "evt"
+       && op != "dat"
+       && op != "sl"
+       && op != "x"
+    {
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+    let body = inscription.body().ok_or_else(|| BRC20Error::ContentBodyNull)?;
+    let body_string = body.to_vec();
+    // println!("{:?}", body_string);
+    let payload_value: ciborium::Value = ciborium::de::from_reader(&body_string[..])?; //TODO: get the diagnostic notation result
+    // println!("\n>>> atomicals ciborium::Value: {:?}", payload_value);
+    let jsons = cbor_to_json(payload_value);
+    // check if request_realm and request_subrealm in keys
+    let request_realm = &jsons["args"]["request_realm"];
+    let request_subrealm = &jsons["args"]["request_subrealm"];
+    if !request_realm.is_null() || !request_subrealm.is_null() {
+        Err(BRC20Error::ContentTypeNotValid.into())
+    }
+    else{
+        Ok(jsons.to_string())
+    }
+}
 
 
 /// extract assets by protocol name from transaction id
@@ -353,7 +406,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
-                let event = match decode_bitmap(inscription) {
+                let event = match decode_ord_bitmap(inscription) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 } ;
@@ -365,7 +418,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
-                let event = match decode_brc20(inscription) {
+                let event = match decode_ord_brc20(inscription) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 } ;
@@ -377,7 +430,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
-                let event = match decode_brc100(inscription) {
+                let event = match decode_ord_brc100(inscription) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 } ;
@@ -389,7 +442,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
-                let event = match decode_brc420(inscription) {
+                let event = match decode_ord_brc420(inscription) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 } ;
@@ -401,7 +454,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
-                let event = match decode_sns(inscription) {
+                let event = match decode_ord_sns(inscription) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 } ;
@@ -413,7 +466,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
-                let event = match decode_tap(inscription) {
+                let event = match decode_ord_tap(inscription) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 };
@@ -427,14 +480,47 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
                 let inscription = item.payload.clone();
-                let brc20_event = match decode_arc20(inscription) {
+                let brc20_event = match decode_atom_arc20(inscription) {
                     std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
                     Err(err) =>{},
                 } ;
             }
         }
-        "arc721" => {
-            println!("arc20...");
+        "relam" => {
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"atom");
+            // let raw_envelopes = ord::RawEnvelope::from_transaction(&rawtx);
+            for item in envelopes.iter() {
+                // let body = item.clone().payload.body.unwrap();
+                let inscription = item.payload.clone();
+                let brc20_event = match decode_atom_relam(inscription) {
+                    std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
+                    Err(err) =>{},
+                } ;
+            }
+        }
+        "atom-nft" => {
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"atom");
+            // let raw_envelopes = ord::RawEnvelope::from_transaction(&rawtx);
+            for item in envelopes.iter() {
+                // let body = item.clone().payload.body.unwrap();
+                let inscription = item.payload.clone();
+                let brc20_event = match decode_atom_nft(inscription) {
+                    std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
+                    Err(err) =>{},
+                } ;
+            }
+        }
+        "atom-others" => {
+            let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"atom");
+            // let raw_envelopes = ord::RawEnvelope::from_transaction(&rawtx);
+            for item in envelopes.iter() {
+                // let body = item.clone().payload.body.unwrap();
+                let inscription = item.payload.clone();
+                let brc20_event = match decode_atom_others(inscription) {
+                    std::result::Result::Ok(event) => println!("{:?}: {:?}", txid, event),
+                    Err(err) =>{},
+                } ;
+            }
         }
 
         // ===runes===

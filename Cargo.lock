@@ -126,6 +126,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9475866fec1451be56a3c2400fd081ff546538961565ccb5b7142cbd22bc7a51"
+
+[[package]]
 name = "bech32"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -475,6 +481,7 @@ name = "inscan"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.0",
  "bitcoin",
  "bitcoin_hashes",
  "brotli",
@@ -508,7 +515,7 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8128f36b47411cd3f044be8c1f5cc0c9e24d1d1bfdc45f0a57897b32513053f2"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "serde",
  "serde_json",
 ]
@@ -519,7 +526,7 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26d9104d516092f092d97448787505881fdb6518293b2d6500bf9c180c839dd"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "serde",
  "serde_json",
 ]

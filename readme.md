@@ -4,22 +4,24 @@ A [Rust](https://www.rust-lang.org/) tool that can extract inscription data (e.g
 
 ## Supported Protocols
 - **Ordinals**
-    - [ ] Ordinals NFT: ✔️`mint`, ✖️`transfer`
+    - [ ] Inscription: ✔️`mint`, ✖️`transfer`
     - [x] BRC20: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
-    - [ ] BRC100: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
-    - [ ] BRC420: 
+    - [x] BRC100: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
+    - [x] BRC420: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
     - [x] Bitmap: ✔️`mint`, ✖️`transfer`
     - [x] SNS: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
     - [x] Tap: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
 - **Atomicals**
-    - [x] ARC20: ✔️`atomical-create-ft`, ✔️`dstributed-mint`, ✔️`ft-color-split`, ✖️`ft-color-regular`
-    - [ ] ARC721: 
+    - [x] ARC20: ✔️`dft`(deploy), ✔️`ft`(mint), ✔️`dmt`(mint), ✔️`y`(split), ✖️`transfer`
+    - [ ] Atom-NFT: ✔️`nft`->`request_container`, ✔️`nft`->`request_dmitem`, `nft`, ✖️`transfer`
+    - [ ] Realm: ✔️`nft`->`request_realm`, ✔️`nft`->`request_subrealm`, ✖️`transfer`
+    - [ ] Atom-Others: `mod`, `evt`, `dat`, `sl`, `x`
 - **Stamps**
     - [ ] SRC20: `deploy`, `mint`, `transfer`
-    - [ ] SRC721
+    - [ ] SRC721: 
 - **Runes**
-    - [ ] Runestone
-    - [ ] Rune Alpha
+    - [ ] Runestone: 
+    - [ ] Rune Alpha: 
 
 > Note: it's only scan(decode) protocols stored in raw transaction data, not include the whole indexing data. So the `common` transaction depend on indexing data which marked as `✖️` will not be included.
 
