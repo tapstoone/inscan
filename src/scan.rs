@@ -4,17 +4,21 @@ use {
         ord::{self, brcX::brc20, Inscription, InscriptionId, ParsedEnvelope},
     },
     anyhow::{Error, Ok, Result},
-    bitcoin::Txid,
+    bitcoin::{Txid, Transaction, blockdata::script::Instruction,
+        blockdata::opcodes::all::OP_CHECKMULTISIG},
     bitcoincore_rpc::{Client, RpcApi},
     serde::{Deserialize, Serialize},
     serde_json::{self, Value},
     std::{
         str::{self, FromStr},
         string,
+        iter::repeat
     },
     thiserror,
     ciborium,
-    base64
+    base64,
+    crypto::rc4::Rc4,
+    crypto::symmetriccipher::SynchronousStreamCipher,
 };
 
 // type Result<T = (), E = Error> = std::result::Result<T, E>;
@@ -375,6 +379,70 @@ fn decode_atom_others(inscription: Inscription)->Result<String>{
 }
 
 
+// 1. find all the multisig ouput in ouputs
+// 2. take the first two ouput  
+pub fn decode_stamp_src20(rawtx: &Transaction) ->Result<String> {
+    let tx_input0 = rawtx.input[0].previous_output.txid.to_string();
+    let signing_key = hex::decode(&tx_input0).unwrap();
+    // println!("signing_key: {:#?}", key);
+
+
+    let mut payload = Vec::new();
+
+    let mut pubkeys_idx:u8 = 1;
+    for (i, output) in rawtx.output.iter().enumerate(){
+        // check if output is multisig
+        if pubkeys_idx>2 { continue; }
+        let encoded_script = &output.script_pubkey;
+
+        let mut instructions_check  =  encoded_script.instructions().peekable();
+        let is_multisig = instructions_check.any(|instruction| {
+            matches!(&instruction, std::result::Result::Ok(Instruction::Op(OP_CHECKMULTISIG)))
+        });
+
+        if  !is_multisig{continue;}
+
+        let mut instructions  =  encoded_script.instructions().peekable();
+        let mut insctrction_idx:u8 = 1;
+        while let Some(insctrction) = instructions.next().transpose()?{
+            if insctrction_idx > 2 {break;}
+            // TODO: check whether opcode is MULTISIG, // Take the first two pubkeys from all present multisig scripts
+            // if let Some(pushed_op) = &insctrction.opcode(){
+            // }
+            if let Some(pushed_bytes) = insctrction.push_bytes() {
+                // payload.push(pushed_bytes);
+                let value = pushed_bytes.as_bytes().to_vec();
+                payload.extend_from_slice(&value[1..value.len()-1]);
+                insctrction_idx += 1;
+            }
+            // println!("{:?}", insctrction);
+        }
+        pubkeys_idx +=1;
+    }
+    if payload.is_empty(){
+        return Err(BRC20Error::ContentBodyNull.into());
+    }
+
+    let mut rc4 = Rc4::new(&signing_key);
+    let mut decode_result: Vec<u8> = repeat(0).take(payload.len()).collect();
+    rc4.process(&payload, &mut decode_result);
+
+    // strip and decode hex to string
+    let len = &decode_result[0..2];
+    let protocol = str::from_utf8(&decode_result[2..2+6])?;
+    if protocol == "stamp:" {
+        let result = str::from_utf8(&decode_result[2+6..])?;
+        return Ok(result.to_string())
+    }
+    else {
+        Err(BRC20Error::ContentBodyNull.into())
+    }
+    // println!("\nlens: {:?}, protocol: {:?}", len, );
+    // println!(">>> stamps(src20) inscription decoded: {:#?}", str::from_utf8(&decode_result[2+6..]).unwrap());
+
+    // Ok("aaa".to_string())
+}
+
 /// extract assets by protocol name from transaction id
 pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
     let compact = true;
@@ -382,7 +450,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
     
     match protocol.to_lowercase().as_str() {
         // ordinals
-        "inscription" => {
+        "ord" => {
             let ordinals = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             if compact {
                 let result = Box::new(CompactOutput {
@@ -401,7 +469,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             };
         }
 
-        "bitmap" => {
+        "ord-bitmap" => {
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
@@ -413,7 +481,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             }
         }
 
-        "brc20" => {
+        "ord-brc20" => {
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
@@ -425,7 +493,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             }
         }
 
-        "brc100" => {
+        "ord-brc100" => {
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
@@ -437,7 +505,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             }
         }
 
-        "brc420" => {
+        "ord-brc420" => {
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
@@ -449,7 +517,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             }
         }
 
-        "sns" =>{
+        "ord-sns" =>{
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
@@ -461,7 +529,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             }
         }
 
-        "tap" => {
+        "ord-tap" => {
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
             for item in envelopes.iter() {
                 // let body = item.clone().payload.body.unwrap();
@@ -474,7 +542,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
         }
 
         // ===Atomicals===
-        "arc20" => {
+        "atom-arc20" => {
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"atom");
             // let raw_envelopes = ord::RawEnvelope::from_transaction(&rawtx);
             for item in envelopes.iter() {
@@ -486,7 +554,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
                 } ;
             }
         }
-        "relam" => {
+        "atom-relam" => {
             let envelopes = ord::ParsedEnvelope::from_transaction(&rawtx, b"atom");
             // let raw_envelopes = ord::RawEnvelope::from_transaction(&rawtx);
             for item in envelopes.iter() {
@@ -523,9 +591,15 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
             }
         }
 
-        // ===runes===
-
         // ===stamps===
+        "stamp-src20" =>{
+            match decode_stamp_src20(&rawtx) {
+                std::result::Result::Ok(event)=>println!("{:?}: {:?}", txid, event),
+                Err(err) => {}
+            }
+        }
+
+        // ===runes===
         _ => {
             // Default case if none of the above match
             println!("Unknown Protocol Name {:?}", protocol);
