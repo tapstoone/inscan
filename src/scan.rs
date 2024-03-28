@@ -2,23 +2,9 @@ use {
     crate::{
         atomicals,
         ord::{self, brcX::brc20, Inscription, InscriptionId, ParsedEnvelope},
-    },
-    anyhow::{Error, Ok, Result},
-    bitcoin::{Txid, Transaction, blockdata::script::Instruction,
-        blockdata::opcodes::all::OP_CHECKMULTISIG},
-    bitcoincore_rpc::{Client, RpcApi},
-    serde::{Deserialize, Serialize},
-    serde_json::{self, Value},
-    std::{
-        str::{self, FromStr},
-        string,
-        iter::repeat
-    },
-    thiserror,
-    ciborium,
-    base64,
-    crypto::rc4::Rc4,
-    crypto::symmetriccipher::SynchronousStreamCipher,
+    }, anyhow::{Error, Ok, Result}, base64, bitcoin::{block, blockdata::{opcodes::all::OP_CHECKMULTISIG, script::Instruction}, Transaction, Txid}, bitcoincore_rpc::{Client, RpcApi}, ciborium, crypto::{rc4::Rc4, symmetriccipher::SynchronousStreamCipher}, serde::{Deserialize, Serialize}, serde_json::{self, Value}, std::{
+        iter::repeat, str::{self, FromStr}
+    }, thiserror
 };
 
 // type Result<T = (), E = Error> = std::result::Result<T, E>;
@@ -461,7 +447,9 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
                         .collect::<Result<Vec<CompactInscription>>>()
                         .unwrap(),
                 });
-                println!("\n{:?}: {:?}", txid, result);
+                if !result.inscriptions.is_empty(){
+                    println!("\n{:?}: {:?}", txid, result);
+                }
             } else {
                 let result = Box::new(RawOutput {
                     inscriptions: ordinals,
@@ -608,41 +596,55 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) {
 }
 
 
-
-pub fn run_txs(rpc: &Client, txids: &String, protocols: &str) {
-    let txs: Vec<&str> = txids.split(',').collect();
-    // let protocols: Vec<&str> = protocols_str.split(',').collect();
-    for item in txs {
-        let id = Txid::from_str(item).unwrap();
-        let rawtx = rpc.get_raw_transaction(&id, None).unwrap();
-
-        let ordinals = ord::ParsedEnvelope::from_transaction(&rawtx, protocols.as_bytes());
-        println!("\n{:?}: {:?}", item, ordinals);
-
-        // for protocol in &protos{
-        //     match protocol {
-        //         &"arc20" => decode_trasaction_brc20(&rawtx),
-        //         &"brc20" => println!("Found 'brc20'"),
-        //         &"ordinals" => println!("Found 'ordinals'"),
-        //         _ => println!("Found something else: {}", protocol),
-        //     }
-        // }
-
-        // let tapscript = rawtx.input[0].witness.tapscript().unwrap();
-        // println!("\ntapscript: {:?}", tapscript);
+fn split_string(input_string: &str, delimiter: &str) -> Vec<String> {
+    if input_string.contains(delimiter) {
+        input_string.split(delimiter).map(|s| s.to_string()).collect()
+    } else {
+        vec![input_string.to_string()]
     }
 }
 
-pub fn run_blocks(rpc: &Client, block_number: u64, protocol: &str) {
-    let block_hash = rpc.get_block_hash(block_number).unwrap();
-
-    // get the txs
-    let block_data = rpc.get_block(&block_hash).unwrap();
-    // println!("the block header of {} is: {:?}", block_number, block_data.header);
-    // println!("the block txs of {} is: {:?}", block_number, block_data.txdata);
-
-    for tx in &block_data.txdata {
-        let txid = tx.txid();
+pub fn run_txs(rpc: &Client, txids: &String, protocol: &str) {
+    let txs = split_string(&txids, ",");
+    for tx in txs{
+        let txid = Txid::from_str(&tx).unwrap();
         decode_tx(rpc, &txid, protocol)
     }
+}
+
+pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str) {
+    let blocks:Vec<u64> = if block_number.contains(","){
+        let blocks_str = split_string(&block_number, ",");
+        blocks_str.iter().map(|s| s.parse::<u64>().unwrap()).collect()
+    }
+    else if block_number.contains(":") {
+        let txs = split_string(&block_number, ":");
+        let start: u64 = txs[0].parse().unwrap();
+        let stop: u64 = txs[1].parse().unwrap();
+        (start..=stop).collect()
+    } else{
+        vec![block_number.parse::<u64>().unwrap()]
+    };
+ 
+    // println!("{:?}", blocks);
+    for block in blocks {
+        let block_hash = rpc.get_block_hash(block).unwrap();
+        let block_data = rpc.get_block(&block_hash).unwrap();
+        for tx in &block_data.txdata {
+            let txid = tx.txid();
+            decode_tx(rpc, &txid, protocol)
+        }
+    }
+
+    // let block_hash = rpc.get_block_hash(block_number).unwrap();
+
+    // // get the txs
+    // let block_data = rpc.get_block(&block_hash).unwrap();
+    // // println!("the block header of {} is: {:?}", block_number, block_data.header);
+    // // println!("the block txs of {} is: {:?}", block_number, block_data.txdata);
+
+    // for tx in &block_data.txdata {
+    //     let txid = tx.txid();
+    //     decode_tx(rpc, &txid, protocol)
+    // }
 }

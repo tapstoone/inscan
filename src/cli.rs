@@ -16,45 +16,37 @@ pub struct Cli {
     #[arg(short='p', long, required=true)]
     pub rpc_pass: String,
 
-    /// Sets a custom config file
-    #[arg(short, long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
-    /// Turn debugging information on
-    #[arg(short, long, action = clap::ArgAction::Count)]
-    pub debug: u8,
-
-
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// does testing things
-    #[command(about = "extract data from blocks number")]
+    /// blocks params
+    #[command(about = "extract data from blocks numbers")]
     Blocks {
         /// the block numbers to extract, single(824958) or range(820000:820010)
         #[arg(short='n', long)]
-        heights: u64,
+        height: String,
 
         /// the protocols to extract
         #[arg(short='p', long)]
-        protocols: String,
+        protocol: String,
 
         /// the path to save extract inscriptions data 
         #[arg(short='o', long)]
         output: Option<PathBuf>,
     },
-    /// does testing things
+    /// transactions params
     #[command(about = "extract data from transaction ids")]
     Txs {
         /// lists test values
         #[arg(short, long)]
-        txids: String,
+        txid: String,
 
         /// the protocols to extract
         #[arg(short='p', long, )]
-        protocols: String,
+        protocol: String,
 
         /// the path to save extract inscriptions data 
         #[arg(short='o', long)]
