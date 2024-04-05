@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
 
 
 #[derive(Parser)]
@@ -24,32 +23,37 @@ pub struct Cli {
 pub enum Commands {
     /// blocks params
     #[command(about = "extract data from blocks numbers")]
-    Blocks {
-        /// the block numbers to extract, single(824958) or range(820000:820010)
-        #[arg(short='n', long)]
-        height: String,
+    Decode {
+        /// the block height to extract, single(824958) or range(820000:820010)
+        #[arg(short='b', long)]
+        height: Option<String>,
 
+        /// the tx id to extract, single(04ij...dhf92) or range(04ij...dhf92,jgi..8gjs)
+        #[arg(short='t', long)]
+        txid: Option<String>,
+        
         /// the protocols to extract
         #[arg(short='p', long)]
         protocol: String,
 
-        /// the path to save extract inscriptions data 
+        /// the path to save jsonl data 
         #[arg(short='o', long)]
-        output: Option<PathBuf>,
+        output: String,
+
     },
     /// transactions params
-    #[command(about = "extract data from transaction ids")]
-    Txs {
+    #[command(about = "index all the data and save to db")]
+    Index {
         /// lists test values
-        #[arg(short, long)]
-        txid: String,
+        #[arg(short='s', long)]
+        start: String,
 
         /// the protocols to extract
         #[arg(short='p', long, )]
         protocol: String,
 
-        /// the path to save extract inscriptions data 
-        #[arg(short='o', long)]
-        output: Option<PathBuf>,
+        /// the uri to connection postgres 
+        #[arg(short='c', long)]
+        connection: Option<String>,
     }
 }

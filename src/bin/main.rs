@@ -26,14 +26,23 @@ fn main() {
 
     // matches just as you would the top level cmd
     match &cli.command {
-        Some(cli::Commands::Blocks { height, protocol, output }) => {
-            println!("Extract {protocol:?} from blocks {height:?} ...");
-            scan::run_blocks(&rpc,height, &protocol);
+        Some(cli::Commands::Decode { height, txid, protocol,output }) => {
+            if (height.is_some() && txid.is_some()) || (height.is_none() && txid.is_none()){
+                panic!("height and txid can only choose one. can't be both extis or both none");
+            }
+            if height.is_some() {
+                println!("Extract {protocol:?} from blocks {height:?} ...");
+                scan::run_blocks(&rpc,&height.as_ref().unwrap(), &protocol, &output);
+            }
+            if txid.is_some() {
+                println!("Extract {protocol:?} from txs {txid:?} ...");
+                scan::run_txs(&rpc, &txid.as_ref().unwrap(), &protocol, &output);
+            }
+
             // 
         }
-        Some(cli::Commands::Txs { txid, protocol, output }) => {
-            println!("Extract {protocol:?} from txs {txid:?} ...");
-            scan::run_txs(&rpc, &txid, &protocol);
+        Some(cli::Commands::Index { start, protocol, connection }) => {
+
         }
         None => {}
     }
