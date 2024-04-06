@@ -105,7 +105,25 @@ enum BRC20Error{
     ContentBodyNotJson,
 }
 
-// 
+fn decode_ord(rawtx:Transaction)->Result<serde_json::Value>{
+    // let compact = true;
+    let parsed_inscriptions = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
+    let result = Box::new(CompactOutput {
+        inscriptions: parsed_inscriptions
+            .clone()
+            .into_iter()
+            .map(|inscription| inscription.payload.try_into())
+            .collect::<Result<Vec<CompactInscription>>>()
+            .unwrap(),
+    });
+    if !result.inscriptions.is_empty(){
+        // println!("\n{:?}: {:?}", txid, result);
+        return Ok(serde_json::to_value(result)?);
+    }else{
+        return Err(BRC20Error::ContentTypeNotValid.into());
+    }
+}
+
 fn decode_ord_brc20(inscription: Inscription) ->Result<serde_json::Value> {
     let content_type = inscription.content_type().ok_or_else(|| BRC20Error::ContentTypeNull)?;
     if content_type != "text/plain"
@@ -469,31 +487,18 @@ fn decode_rune_alpha(rawtx: &Transaction)->Result<serde_json::Value>{
 
 /// extract assets by protocol name from transaction id, should return Option<Vec<Value>>
 pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::Value>{
-    let compact = true;
     let rawtx = rpc.get_raw_transaction(&txid, None).unwrap();
     let mut events: Vec<serde_json::Value> = Vec::new();
     
     match protocol.to_lowercase().as_str() {
-        // ordinals
         "ord" => {
-            let ordinals = ord::ParsedEnvelope::from_transaction(&rawtx, b"ord");
-            if compact {
-                let result = Box::new(CompactOutput {
-                    inscriptions: ordinals
-                        .clone()
-                        .into_iter()
-                        .map(|inscription| inscription.payload.try_into())
-                        .collect::<Result<Vec<CompactInscription>>>()
-                        .unwrap(),
-                });
-                if !result.inscriptions.is_empty(){
-                    println!("\n{:?}: {:?}", txid, result);
-                }
-            } else {
-                let result = Box::new(RawOutput {
-                    inscriptions: ordinals,
-                });
-            };
+            let event = match decode_ord(rawtx) {
+                std::result::Result::Ok(event) => {
+                    // println!("{:?}: {:?}", txid, event);
+                    events.push(serde_json::json!({"protocol":"ord", "payload":event}));
+                },
+                Err(err) =>{},
+            } ;
         }
 
         "ord-bitmap" => {
