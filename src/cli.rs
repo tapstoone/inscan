@@ -46,7 +46,7 @@ pub enum Commands {
     Index {
         /// lists test values
         #[arg(short='s', long)]
-        start: String,
+        start: u64,
 
         /// the protocols to extract
         #[arg(short='p', long, )]

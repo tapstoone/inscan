@@ -19,11 +19,12 @@ use {
         fs::File,
         io::{BufWriter, Write},
         fs::OpenOptions,
+        thread,
+        time::Duration,
     },
     thiserror,
     sqlx::postgres::PgPoolOptions,
     futures::executor::block_on,
-    tokio,
 };
 
 
@@ -522,7 +523,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
                 let inscription = item.payload.clone();
                 let event = match decode_ord_brc20(inscription) {
                     std::result::Result::Ok(event) => {
-                        println!("{:?}: {:?}", txid, event);
+                        // println!("{:?}: {:?}", txid, event);
                         events.push(serde_json::json!({"protocol":"ord-brc20", "payload":event}));
 
                         // write_jsonl(event, "temp.jsonl");
@@ -699,19 +700,6 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
 }
 
 
-async fn save_to_pg(json_value: &Value) -> Result<(), sqlx::Error> {
-    let pool = PgPoolOptions::new()
-    .max_connections(5)
-    .connect("postgres://postgres:postgres@localhost/postgres")
-    .await?;
-
-    sqlx::query("INSERT INTO people (address) VALUES ($1)")
-    .bind(json_value)
-    .execute(&pool)
-    .await?;
-
-    std::result::Result::Ok(())
-}
 
 fn write_jsonl(value: Value, file_path: &str) -> Result<(), Error> {
     let file = OpenOptions::new()
@@ -786,5 +774,44 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
                 let _ = write_jsonl(data, output);
             }
         }
+    }
+}
+
+
+async fn save_to_pg(json_value: &Value) -> Result<(), sqlx::Error> {
+    let pool = PgPoolOptions::new()
+    .max_connections(5)
+    .connect("postgres://postgres:postgres@localhost/postgres")
+    .await?;
+
+    sqlx::query("INSERT INTO people (address) VALUES ($1)")
+    .bind(json_value)
+    .execute(&pool)
+    .await?;
+
+    std::result::Result::Ok(())
+}
+
+fn get_current_height()->u64 {
+    return 545;
+}
+
+///scan all blocks and save to postgresql
+pub fn scan_all(rpc: &Client, start_height:u64, output:&String){
+    let pg_height = get_current_height();
+    let mut current_height = if pg_height > start_height { pg_height } else { start_height };
+    loop {
+        let rpc_height = rpc.get_block_count().unwrap();
+        if current_height > rpc_height{
+            thread::sleep(Duration::from_secs(1)); // sleep 2sec
+            println!("best height {:?}, waiting for {:?}, sleep 1 sec...", rpc_height, rpc_height+1);
+        } else{
+            println!("processing the height {:?}/{:?}...", current_height, rpc_height);
+            // process current_block
+            run_blocks(rpc, &current_height.to_string(), "ord-brc20", output);
+            current_height += 1;
+    
+        }
+
     }
 }

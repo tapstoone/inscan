@@ -42,7 +42,7 @@ fn main() {
             // 
         }
         Some(cli::Commands::Index { start, protocol, connection }) => {
-
+            scan::scan_all(&rpc, *start, &"examples/runall2.jsonl".to_string() )
         }
         None => {}
     }
