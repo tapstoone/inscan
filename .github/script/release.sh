@@ -10,7 +10,7 @@ echo "Packaging inscan $VERSION for $TARGET..."
 test -f Cargo.lock || cargo generate-lockfile
 
 echo "Building inscan..."
-RUSTFLAGS="--deny warnings $TARGET_RUSTFLAGS" \
+RUSTFLAGS="$TARGET_RUSTFLAGS" \
   cargo build --bin inscan --target $TARGET --release
 EXECUTABLE=target/$TARGET/release/inscan
 
