@@ -24,8 +24,7 @@ cp \
   $EXECUTABLE \
   Cargo.lock \
   Cargo.toml \
-  LICENSE \
-  README.md \
+  readme.md \
   $DIST/inscan-$VERSION
 
 cd $DIST
