@@ -1,2 +1,6 @@
+/.idea/
+/.vagrant
+/.vscode
 /target
 /docs
+/examples

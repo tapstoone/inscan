@@ -736,11 +736,19 @@ fn split_string(input_string: &str, delimiter: &str) -> Vec<String> {
     }
 }
 
-pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, ouput:&String) {
+pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
     let txs = split_string(&txids, ",");
     for tx in txs{
         let txid = Txid::from_str(&tx).unwrap();
-        let _ = decode_tx(rpc, &txid, protocol);
+        let result = decode_tx(rpc, &txid, protocol);
+        for evt in result{
+            let data = serde_json::json!({
+                "txhash": txid,
+                "protocol":evt.get("protocol").unwrap(),
+                "payload":evt.get("payload").unwrap(),
+            });
+            let _ = write_jsonl(data, output);
+        }
     }
 }
 

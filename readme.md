@@ -4,26 +4,28 @@ A [Rust](https://www.rust-lang.org/) tool that can extract inscription data (e.g
 
 ## Supported Protocols
 - **Ordinals**
-    - [ ] Inscription: ✔️`mint`, ✖️`transfer`
-    - [x] BRC20: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
-    - [x] BRC100: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
-    - [x] BRC420: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
-    - [x] Bitmap: ✔️`mint`, ✖️`transfer`
-    - [x] SNS: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
-    - [x] Tap: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
+    - [x] ord: ✔️`mint`, ✖️`transfer`
+    - [x] ord-brc20: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
+    - [x] ord-brc100: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
+    - [x] ord-brc420: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
+    - [x] ord-bitmap: ✔️`mint`, ✖️`transfer`
+    - [x] ord-sns: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
+    - [x] ord-tap: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
 - **Atomicals**
-    - [x] ARC20: ✔️`dft`(deploy), ✔️`ft`(mint), ✔️`dmt`(mint), ✔️`y`(split), ✖️`transfer`
-    - [ ] Atom-NFT: ✔️`nft`->`request_container`, ✔️`nft`->`request_dmitem`, `nft`, ✖️`transfer`
-    - [ ] Realm: ✔️`nft`->`request_realm`, ✔️`nft`->`request_subrealm`, ✖️`transfer`
-    - [ ] Atom-Others: `mod`, `evt`, `dat`, `sl`, `x`
+    - [x] atom-arc20: ✔️`dft`(deploy), ✔️`ft`(mint), ✔️`dmt`(mint), ✔️`y`(split), ✖️`transfer`
+    - [x] atom-nft: ✔️`nft`->`request_container`, ✔️`nft`->`request_dmitem`, `nft`, ✖️`transfer` Note: bytes was encoded in base64
+    - [x] atom-realm: ✔️`nft`->`request_realm`, ✔️`nft`->`request_subrealm`, ✖️`transfer`
+    - [x] atom-others: ✔️`mod`, ✔️`evt`, ✔️`dat`, ✔️`sl`, ✔️`x`
 - **Stamps**
-    - [ ] SRC20: `deploy`, `mint`, `transfer`
-    - [ ] SRC721: 
+    - [x] stamp-src20: ✔️`deploy`, ✔️`mint`, ✔️`transfer`
+    - [ ] stamp-src721: ✖️`mint`, ✖️`transfer`
 - **Runes**
-    - [ ] Runestone: 
-    - [ ] Rune Alpha: 
+    - [ ] rune-stone: 
+    - [x] rune-alpha: ✔️`etching`(deploy), ✔️`edicts`(transfer), ✔️`mint`
 
-> Note: it's only scan(decode) protocols stored in raw transaction data, not include the whole indexing data. So the `common` transaction depend on indexing data which marked as `✖️` will not be included.
+> Note: 
+>1. It's only scan(decode) protocols stored in raw transaction data, not include the whole indexing data. So the `common` transaction depend on indexing data which marked as `✖️` will not be included.
+>2. Currently, the protocols only perform basic checks and do not perform strict verification. It should not used in production environments.
 
 ## Install
 ```
@@ -38,33 +40,26 @@ cargo build --release
 
 1. Extract inscriptions from blocks.
     ``` bash
-    inscan 
-        --rpc-user
-        --rpc-pass
-    blocks
-        --heights
-        --protocol
-        --output
-        --help
+    inscan \
+        --rpc-user username \
+        --rpc-pass password \
+    decode \
+        --height 836068 \
+        --protocol rune-alpha \
+        --output output/836068.jsonl
     ```
 
 2. Extract inscriptions from transactions
     ``` bash
-    inscan 
-        --rpc-user
-        --rpc-pass
-    txs
-        --txids
-        --protocol
-        --output
-        --help
+    inscan \
+        --rpc-user username \
+        --rpc-pass password \
+    decode \
+        --txid 913bebf12d6030a092890d22dbc565df2b2f32b33876568bca19e7e92fbe4f77 \
+        --protocol ord \
+        --output output/ord-4f77.jsonl
     ```
-
-## TODO
-- [ ] Indexer: add data indxer for each protocol to identify the invalid event and support transfer event
-- [ ] API: 
-- [ ] Optimize: iterator each txs of block and check which protocol this tx is.
 
 ## Reference
 - https://github.com/ordinals/ord
-- https://www.gate.io/zh/inscription/bitcoin/cbrc-20
+- https://github.com/atomicals/atomicals-electrumx
