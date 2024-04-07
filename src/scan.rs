@@ -1,6 +1,5 @@
 use {
     crate::ord::{self, Inscription, InscriptionId, ParsedEnvelope},
-    crate::runes::{self, Runestone},
     crate::runealpha::{self, Runestone as Runealpha},
     anyhow::{Error, Ok, Result},
     base64,
@@ -469,11 +468,11 @@ pub fn decode_stamp_src20(rawtx: &Transaction) ->Result<serde_json::Value> {
     // Ok("aaa".to_string())
 }
 
-fn decode_rune_stone(rawtx: &Transaction)->Result<String>{
-    let aa = Runestone::from_transaction(rawtx);
-    println!("rune stone: {:?}",aa);
-    Ok("t".to_lowercase())
-}
+// fn decode_rune_stone(rawtx: &Transaction)->Result<String>{
+//     let aa = Runestone::from_transaction(rawtx);
+//     println!("rune stone: {:?}",aa);
+//     Ok("t".to_lowercase())
+// }
 
 fn decode_rune_alpha(rawtx: &Transaction)->Result<serde_json::Value>{
     // let rune = Runealpha::from_transaction(rawtx).ok_or("name");
@@ -676,12 +675,12 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
                 Err(err) => {}
             }
         }
-        "rune-stone" =>{
-            match decode_rune_stone(&rawtx) {
-                std::result::Result::Ok(event)=>println!("{:?}: {:?}", txid, event),
-                Err(err) => {}
-            }
-        }
+        // "rune-stone" =>{
+        //     match decode_rune_stone(&rawtx) {
+        //         std::result::Result::Ok(event)=>println!("{:?}: {:?}", txid, event),
+        //         Err(err) => {}
+        //     }
+        // }
         // "rune-alpha" => {
         //     match decode_rune_alpha(&rawtx) {
         //         std::result::Result::Ok(event) => {
