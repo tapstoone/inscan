@@ -19,6 +19,8 @@ use {
         fs::File,
         io::{BufWriter, Write},
         fs::OpenOptions,
+        thread,
+        time::Duration,
     },
     thiserror,
     sqlx::postgres::PgPoolOptions,
@@ -522,7 +524,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
                 let inscription = item.payload.clone();
                 let event = match decode_ord_brc20(inscription) {
                     std::result::Result::Ok(event) => {
-                        println!("{:?}: {:?}", txid, event);
+                        // println!("{:?}: {:?}", txid, event);
                         events.push(serde_json::json!({"protocol":"ord-brc20", "payload":event}));
 
                         // write_jsonl(event, "temp.jsonl");
@@ -785,6 +787,23 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
                 });
                 let _ = write_jsonl(data, output);
             }
+        }
+    }
+}
+
+
+pub fn index_realtime(rpc: &Client, start_height:u64, protocol: &str, output:&String){
+    let mut current_height = start_height;
+    loop {
+        let rpc_height = rpc.get_block_count().unwrap();
+        if current_height > rpc_height{
+            thread::sleep(Duration::from_secs(1)); // sleep 2sec
+            println!("best height is {:?}, waiting for {:?}, sleep 1 sec...", rpc_height, rpc_height+1);
+        } else{
+            println!("processing the height {:?}/{:?}...", current_height, rpc_height);
+            // process current_block
+            run_blocks(rpc, &current_height.to_string(), &protocol, output);
+            current_height += 1;
         }
     }
 }

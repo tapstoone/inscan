@@ -1,6 +1,6 @@
 # Insacn (Inscription Scan)
 
-A [Rust](https://www.rust-lang.org/) tool that can extract inscription data (e.g. ordinals, arc20, brc20, runes, src20...) from blocks and transactions on [Bitcoin](https://bitcoin.org/).
+A [Rust](https://www.rust-lang.org/) tool that can decode/index inscription events data (e.g. ordinals, arc20, brc20, runes, src20...) from blocks and transactions on [Bitcoin](https://bitcoin.org/).
 
 ## Supported Protocols
 - **Ordinals**
@@ -8,6 +8,7 @@ A [Rust](https://www.rust-lang.org/) tool that can extract inscription data (e.g
     - [x] ord-brc20: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
     - [x] ord-brc100: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
     - [x] ord-brc420: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
+    - [ ] ord-orc20: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
     - [x] ord-bitmap: ✔️`mint`, ✖️`transfer`
     - [x] ord-sns: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
     - [x] ord-tap: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
@@ -38,27 +39,28 @@ cargo build --release
 ## Usage
 `inscan` requires a synced bitcoind node with `-txindex`. `inscan` communicates with bitcoind via RPC to retrive data. 
 
-1. Extract inscriptions from blocks.
+1. Decode from block
     ``` bash
-    inscan \
-        --rpc-user username \
-        --rpc-pass password \
-    decode \
-        --height 836068 \
-        --protocol rune-alpha \
-        --output output/836068.jsonl
+    inscan -u devnet -w devnet --protocol ord-brc20 --out-file examples/block-838266.jsonl \
+        decode --block 838266 #range blocks 838266:838270 or multi blocks 838266,838275,838279
     ```
 
-2. Extract inscriptions from transactions
+2. Decode from transaction id
     ``` bash
-    inscan \
-        --rpc-user username \
-        --rpc-pass password \
-    decode \
-        --txid 913bebf12d6030a092890d22dbc565df2b2f32b33876568bca19e7e92fbe4f77 \
-        --protocol ord \
-        --output output/ord-4f77.jsonl
+    inscan -u devnet -w devnet --protocol ord-brc20 --out-file examples/aaabbb3.jsonl \
+        decode --txid c631181e8f7740064ec5e832d773086369d30f5297713a0b098d6d95ffe0c78b
+        #multi txids 913bebf12d6030a092890d22dbc565df2b2f32b33876568bca19e7e92fbe4f77,c631181e8f7740064ec5e832d773086369d30f5297713a0b098d6d95ffe0c78b
+
     ```
+3. Index all blocks start from 838250
+    ```bash
+    inscan -u devnet -w devnet --protocol ord-brc20 --out-file examples/block-838266.jsonl \
+        index --start 838266
+    ```
+
+
+## Output
+- **local jsonl file**: the output `jsonl` format is a nested line structures json, more details can be found at: [docs/data-structure.md](docs/data-structure.md)
 
 ## Reference
 - https://github.com/ordinals/ord
