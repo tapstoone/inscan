@@ -53,7 +53,7 @@ pub enum Commands {
     Index {
         /// lists test values
         #[arg(short='S', long)]
-        start: String,
+        start: u64,
 
     }
 }

@@ -58,6 +58,7 @@ fn main() {
             if cli.out_file.is_some(){
                 println!("Start scaning {protocol:?} from block {start:?} to latest block and save to local file ...");
                 // TODO
+                scan::index_realtime(&rpc, *start, &protocol, &cli.out_file.as_ref().unwrap());
             }
             if cli.out_db.is_some(){
                 println!("Start scaning {protocol:?} from block {start:?} to latest block and save to database ...");
