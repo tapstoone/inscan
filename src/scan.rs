@@ -28,6 +28,13 @@ use {
     tokio,
 };
 
+// note: the ord include brc20,brc420,stamp... so the we should iter those protocol first, if those protocol return value, then skip to next txid
+const SUPPORT_PROTOCOLS: [&str; 13] = [
+        "atom-arc20", "atom-relam", "atom-nft",  "atom-others",
+        "stamp-src20",
+        "rune-alpha",
+        "ord-brc20", "ord-brc100", "ord-brc420", "ord-bitmap", "ord-sns", "ord-tap", "ord"
+    ];
 
 // type Result<T = (), E = Error> = std::result::Result<T, E>;
 
@@ -605,7 +612,7 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
                 let brc20_event = match decode_atom_arc20(inscription) {
                     std::result::Result::Ok(event) => {
                         // println!("{:?}: {:?}", txid, event);
-                        events.push(serde_json::json!({"protocol":"ord-arc20", "payload":event}));
+                        events.push(serde_json::json!({"protocol":"atom-arc20", "payload":event}));
                     },
                     Err(err) =>{},
                 } ;
@@ -741,8 +748,23 @@ pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
     let txs = split_string(&txids, ",");
     for tx in txs{
         let txid = Txid::from_str(&tx).unwrap();
-        let result = decode_tx(rpc, &txid, protocol);
-        for evt in result{
+        let mut results:Vec<serde_json::Value> = Vec::new();
+        if protocol == "all"{
+            for item in SUPPORT_PROTOCOLS.iter(){
+                let result = decode_tx(rpc, &txid, item);
+                results.extend(result.clone());
+                //TODO: if result contain ord- then break.
+                if !result.is_empty() && result[0].to_string().contains("ord-"){
+                    break;
+                }
+                
+            }
+        }else{
+            let result = decode_tx(rpc, &txid, protocol);
+            results.extend(result);
+        }
+        
+        for evt in results{
             let data = serde_json::json!({
                 "txhash": txid,
                 "protocol":evt.get("protocol").unwrap(),
@@ -775,8 +797,23 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
         let timestamp = block_data.header.time;
         for (idx, tx) in block_data.txdata.iter().enumerate() {
             let txid = tx.txid();
-            let result = decode_tx(rpc, &txid, protocol);
-            for evt in result{
+            let mut results:Vec<serde_json::Value> = Vec::new();
+            if protocol == "all"{
+                for item in SUPPORT_PROTOCOLS{
+                    let result = decode_tx(rpc, &txid, item);
+                    results.extend(result.clone());
+                    //TODO: if result contain ord- then break.
+                    if !result.is_empty() && result[0].to_string().contains("ord-"){
+                        break;
+                    }
+                }
+    
+            }else{
+                let result = decode_tx(rpc, &txid, protocol);
+                results.extend(result);
+            }
+
+            for evt in results{
                 let data = serde_json::json!({
                     "height": block,
                     "blocktime": timestamp,
