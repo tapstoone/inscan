@@ -3,10 +3,10 @@
 -- events
 create table public.inscan_events (
     height integer,
-    blocktime timestamp,
-    txhash VARCHAR(52),
+    blocktime integer,
+    txhash VARCHAR(255),
     txindex integer,
-    protocol integer,
+    protocol VARCHAR(255),
     payload JSONB
 );
 CREATE INDEX inscan_events_height_idx ON public.inscan_events USING btree (height);
