@@ -57,10 +57,15 @@ cargo build --release
     inscan -u devnet -w devnet --protocol ord-brc20 --out-file examples/block-838266.jsonl \
         index --start 838266
     ```
-
+4. save data to postgres
+    ```bash
+    inscan -u devnet -w devnet --protocol ord-brc20 --out-db postgres://postgres:postgres@localhost/postgres \
+        index --start 838266
+    ```
 
 ## Output
 - **local jsonl file**: the output `jsonl` format is a nested line structures json, more details can be found at: [docs/data-structure.md](docs/data-structure.md)
+- **database postgres**: save the event data to postgres.
 
 ## Reference
 - https://github.com/ordinals/ord
