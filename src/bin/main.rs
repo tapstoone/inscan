@@ -37,32 +37,34 @@ fn main() {
             if (block.is_some() && txid.is_some()) || (block.is_none() && txid.is_none()){
                 panic!("height and txid can only choose one. can't be both extis or both none");
             }
+            
             if block.is_some() && cli.out_file.is_some(){
                 println!("Extract {protocol:?} from blocks {block:?} and save to local file ...");
                 scan::run_blocks(&rpc, &block.as_ref().unwrap(), &protocol, &cli.out_file.as_ref().unwrap());
             }
             if block.is_some() && cli.out_db.is_some(){
                 println!("Extract {protocol:?} from blocks {block:?} and save to database ...");
-                //TODO
+                scan::run_blocks(&rpc, &block.as_ref().unwrap(), &protocol, &cli.out_db.as_ref().unwrap());
             }
+
             if txid.is_some() && cli.out_file.is_some(){
                 println!("Extract {protocol:?} from txs {txid:?} and save to local file ...");
                 scan::run_txs(&rpc, &txid.as_ref().unwrap(), &protocol, &cli.out_file.as_ref().unwrap());
             }
             if txid.is_some() && cli.out_db.is_some(){
                 println!("Extract {protocol:?} from txs {txid:?} and save to database ...");
+                scan::run_txs(&rpc, &txid.as_ref().unwrap(), &protocol, &cli.out_db.as_ref().unwrap());
                 // TODO
             }
         }
         Some(cli::Commands::Index { start }) => {
             if cli.out_file.is_some(){
                 println!("Start scaning {protocol:?} from block {start:?} to latest block and save to local file ...");
-                // TODO
                 scan::index_realtime(&rpc, *start, &protocol, &cli.out_file.as_ref().unwrap());
             }
             if cli.out_db.is_some(){
                 println!("Start scaning {protocol:?} from block {start:?} to latest block and save to database ...");
-                // TODO
+                scan::index_realtime(&rpc, *start, &protocol, &cli.out_db.as_ref().unwrap());
             }
         }
         None => {}

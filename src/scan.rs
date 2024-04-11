@@ -25,7 +25,7 @@ use {
     thiserror,
     sqlx::postgres::PgPoolOptions,
     futures::executor::block_on,
-    tokio,
+    chrono::Local,
 };
 
 // note: the ord include brc20,brc420,stamp... so the we should iter those protocol first, if those protocol return value, then skip to next txid
@@ -707,29 +707,48 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
     return events
 }
 
+#[derive(Serialize, Eq, PartialEq, Deserialize, Debug)]
+struct DecodedEvent{
+    height: Option<i64>, //if decode a single txid event this will be None
+    blocktime: Option<i32>,
+    txhash: String,
+    txindex: Option<i32>,
+    protocol: String,
+    payload: serde_json::Value
+}
 
-async fn save_to_pg(json_value: &Value) -> Result<(), sqlx::Error> {
+async fn save_event_to_pg(event: &DecodedEvent, conn: &str) -> Result<(), sqlx::Error> {
     let pool = PgPoolOptions::new()
     .max_connections(5)
-    .connect("postgres://postgres:postgres@localhost/postgres")
+    .connect(conn)
     .await?;
 
-    sqlx::query("INSERT INTO people (address) VALUES ($1)")
-    .bind(json_value)
-    .execute(&pool)
-    .await?;
+    // let pool = PgPool::connect(&conn)
+    // .await
+    // .expect("Failed to connect to the database");
+
+    sqlx::query("INSERT INTO public.inscan_events (height, blocktime, txhash, txindex, protocol, payload) VALUES ($1, $2, $3, $4, $5, $6)")
+        .bind(event.height)
+        .bind(event.blocktime)
+        .bind(&event.txhash)
+        .bind(event.txindex)
+        .bind(&event.protocol)
+        .bind(&event.payload)
+        .execute(&pool)
+        .await?;
 
     std::result::Result::Ok(())
 }
 
-fn write_jsonl(value: Value, file_path: &str) -> Result<(), Error> {
+fn write_jsonl(event: &DecodedEvent, file_path: &str) -> Result<(), Error> {
     let file = OpenOptions::new()
         .append(true)
         .create(true)
         .open(file_path)?;
     // let file = File::create(file_path)?;
     let mut writer = BufWriter::new(file);
-    serde_json::to_writer(&mut writer, &value)?;
+    let json_value = serde_json::to_value(event).unwrap();
+    serde_json::to_writer(&mut writer, &json_value)?;
     writeln!(&mut writer)?;
     writer.flush()?;
     Ok(())
@@ -757,7 +776,6 @@ pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
                 if !result.is_empty() && result[0].to_string().contains("ord-"){
                     break;
                 }
-                
             }
         }else{
             let result = decode_tx(rpc, &txid, protocol);
@@ -765,17 +783,21 @@ pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
         }
         
         for evt in results{
-            let data = serde_json::json!({
-                "txhash": txid,
-                "protocol":evt.get("protocol").unwrap(),
-                "payload":evt.get("payload").unwrap(),
-            });
-            let _ = write_jsonl(data, output);
+            let event = DecodedEvent{
+                height: None, 
+                blocktime: None,
+                txhash: txid.to_string(),
+                txindex: None,
+                protocol: evt.get("protocol").unwrap().to_string(),
+                payload: evt.get("payload").unwrap().clone()
+            };
+            let _ = write_jsonl(&event, output);
         }
     }
 }
 
 pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&String) {
+    // init posrgres connection every block
     let blocks:Vec<u64> = if block_number.contains(","){
         let blocks_str = split_string(&block_number, ",");
         blocks_str.iter().map(|s| s.parse::<u64>().unwrap()).collect()
@@ -812,17 +834,25 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
                 let result = decode_tx(rpc, &txid, protocol);
                 results.extend(result);
             }
-
             for evt in results{
-                let data = serde_json::json!({
-                    "height": block,
-                    "blocktime": timestamp,
-                    "txhash": txid,
-                    "txindex": idx,
-                    "protocol":evt.get("protocol").unwrap(),
-                    "payload":evt.get("payload").unwrap(),
-                });
-                let _ = write_jsonl(data, output);
+                let event = DecodedEvent{
+                    height: Some(block as i64), 
+                    blocktime: Some(timestamp as i32),
+                    txhash: txid.to_string(),
+                    txindex: Some(idx.try_into().unwrap()),
+                    protocol: evt.get("protocol").unwrap().to_string().clone(),
+                    payload: evt.get("payload").unwrap().clone()
+                };
+                if output.starts_with("postgres://"){
+                    let pg = block_on(save_event_to_pg(&event, &output));
+                    match pg {
+                        std::result::Result::Ok(a)=>{},
+                        Err(err)=>{println!("{:?}", err)}
+                    }
+                }else{
+                    let _ = write_jsonl(&event, output);
+
+                }
             }
         }
     }
@@ -831,13 +861,14 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
 
 pub fn index_realtime(rpc: &Client, start_height:u64, protocol: &str, output:&String){
     let mut current_height = start_height;
+    // delete the data start_height incase of duplicate
     loop {
         let rpc_height = rpc.get_block_count().unwrap();
         if current_height > rpc_height{
             thread::sleep(Duration::from_secs(1)); // sleep 2sec
-            println!("best height is {:?}, waiting for {:?}, sleep 1 sec...", rpc_height, rpc_height+1);
+            println!("{} | best height is {:?}, waiting for {:?}, sleep 1 sec...", Local::now().format("%Y-%m-%d %H:%M:%S"), rpc_height, rpc_height+1);
         } else{
-            println!("processing the height {:?}/{:?}...", current_height, rpc_height);
+            println!("{} | processing the height {:?}/{:?} {:?}...", Local::now().format("%Y-%m-%d %H:%M:%S"), current_height, rpc_height, current_height as f64 / rpc_height as f64);
             // process current_block
             run_blocks(rpc, &current_height.to_string(), &protocol, output);
             current_height += 1;
