@@ -25,7 +25,6 @@ use {
     thiserror,
     sqlx::postgres::PgPoolOptions,
     futures::executor::block_on,
-    tokio,
     chrono::Local,
 };
 
@@ -792,11 +791,6 @@ pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
                 protocol: evt.get("protocol").unwrap().to_string(),
                 payload: evt.get("payload").unwrap().clone()
             };
-            let data = serde_json::json!({
-                "txhash": txid,
-                "protocol":evt.get("protocol").unwrap(),
-                "payload":evt.get("payload").unwrap(),
-            });
             let _ = write_jsonl(&event, output);
         }
     }
@@ -849,14 +843,6 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
                     protocol: evt.get("protocol").unwrap().to_string().clone(),
                     payload: evt.get("payload").unwrap().clone()
                 };
-                let data = serde_json::json!({
-                    "height": block,
-                    "blocktime": timestamp,
-                    "txhash": txid,
-                    "txindex": idx,
-                    "protocol":evt.get("protocol").unwrap(),
-                    "payload":evt.get("payload").unwrap(),
-                });
                 if output.starts_with("postgres://"){
                     let pg = block_on(save_event_to_pg(&event, &output));
                     match pg {
@@ -882,7 +868,7 @@ pub fn index_realtime(rpc: &Client, start_height:u64, protocol: &str, output:&St
             thread::sleep(Duration::from_secs(1)); // sleep 2sec
             println!("{} | best height is {:?}, waiting for {:?}, sleep 1 sec...", Local::now().format("%Y-%m-%d %H:%M:%S"), rpc_height, rpc_height+1);
         } else{
-            println!("{} | processing the height {:?}/{:?}...", Local::now().format("%Y-%m-%d %H:%M:%S"), current_height, rpc_height);
+            println!("{} | processing the height {:?}/{:?} {:?}...", Local::now().format("%Y-%m-%d %H:%M:%S"), current_height, rpc_height, current_height as f64 / rpc_height as f64);
             // process current_block
             run_blocks(rpc, &current_height.to_string(), &protocol, output);
             current_height += 1;
