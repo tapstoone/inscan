@@ -465,8 +465,7 @@ pub fn decode_stamp_src20(rawtx: &Transaction) ->Result<serde_json::Value> {
     let protocol = str::from_utf8(&decode_result[2..2+6])?;
     if protocol == "stamp:" {
         let result = str::from_utf8(&decode_result[2+6..])?;
-        // return Ok(result.to_string())
-        return Ok(serde_json::from_str(result)?)
+        return Ok(serde_json::from_str(result.trim_end_matches('\0'))?) //
     }
     else {
         Err(BRC20Error::ContentBodyNull.into())
