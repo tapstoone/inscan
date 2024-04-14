@@ -36,15 +36,15 @@ cargo build --release
 
 
 ## Usage
-`inscan` requires a synced bitcoind node with `-txindex`. `inscan` communicates with bitcoind via RPC to retrive data. 
+`inscan` requires a synced bitcoind node with `-txindex`. `inscan` communicates with bitcoind via RPC to retrive bitcoin transaction data. 
 
-1. Decode from block
+1. Decode arc20 from block
     ``` bash
-    inscan -u devnet -w devnet --protocol ord-brc20 --out-file examples/block-838266.jsonl \
+    inscan -u devnet -w devnet --protocol atom-arc20 --out-file examples/block-838266.jsonl \
         decode --block 838266 #range blocks 838266:838270 or multi blocks 838266,838275,838279
     ```
 
-2. Decode from transaction id
+2. Decode brc20 from transaction id
     ``` bash
     inscan -u devnet -w devnet --protocol ord-brc20 --out-file examples/aaabbb3.jsonl \
         decode --txid c631181e8f7740064ec5e832d773086369d30f5297713a0b098d6d95ffe0c78b
@@ -53,10 +53,10 @@ cargo build --release
     ```
 3. Index all blocks start from 838250
     ```bash
-    inscan -u devnet -w devnet --protocol ord-brc20 --out-file examples/block-838266.jsonl \
+    inscan -u devnet -w devnet --protocol all --out-file examples/block-838266.jsonl \
         index --start 838266
     ```
-4. save data to postgres
+4. Index brc20 and save to postgres
     ```bash
     inscan -u devnet -w devnet --protocol ord-brc20 --out-db postgres://postgres:postgres@localhost/postgres \
         index --start 838266
@@ -66,6 +66,25 @@ cargo build --release
 - **local jsonl file**: the output `jsonl` format is a nested line structures json, more details can be found at: [docs/data-structure.md](docs/data-structure.md)
 - **database postgres**: save the event data to postgres.
 
+The ouput data json format contain the following fields, you can get the detail protocol events data with `paylaod` field:
+
+```json
+{
+    "blocktime":1712693506, //the block time
+    "height":838501,        //the block height
+    "txhash":"ade32e39a0aaa3600c2f4e4061445a447894002894279fd0d15f6c6c8d680f54", //transaction hash
+    "txindex":855,          //the transaction index in one block(start from 0)
+    "protocol":"ord-brc20", //supported bitcoin asset protocol
+    "payload":{             //the detail of the protocol content
+        "amt": "1000",
+        "op": "mint",
+        "p": "brc-20",
+        "tick": "ombi"
+    }
+}
+...
+
+```
 
 
 ## Reference
