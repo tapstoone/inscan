@@ -8,7 +8,6 @@ A [Rust](https://www.rust-lang.org/) tool that can decode/index inscription even
     - [x] ord-brc20: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
     - [x] ord-brc100: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
     - [x] ord-brc420: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
-    - [ ] ord-orc20: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
     - [x] ord-bitmap: ✔️`mint`, ✖️`transfer`
     - [x] ord-sns: ✔️`deploy`, ✔️`mint`, ✖️`transfer`
     - [x] ord-tap: ✔️`deploy`, ✔️`mint`, ✔️`inscripbeTransfer`, ✖️`transfer`
@@ -17,12 +16,12 @@ A [Rust](https://www.rust-lang.org/) tool that can decode/index inscription even
     - [x] atom-nft: ✔️`nft`->`request_container`, ✔️`nft`->`request_dmitem`, `nft`, ✖️`transfer` Note: bytes was encoded in base64
     - [x] atom-realm: ✔️`nft`->`request_realm`, ✔️`nft`->`request_subrealm`, ✖️`transfer`
     - [x] atom-others: ✔️`mod`, ✔️`evt`, ✔️`dat`, ✔️`sl`, ✔️`x`
+- **Runes**
+    - [x] rune-stone: ✔️`etching`(deploy), ✔️`edicts`(transfer), ✔️`mint`, ✖️`transfer`
+    - [x] rune-alpha: ✔️`etching`(deploy), ✔️`edicts`(transfer), ✔️`mint`, ✖️`transfer`
 - **Stamps**
     - [x] stamp-src20: ✔️`deploy`, ✔️`mint`, ✔️`transfer`
     - [ ] stamp-src721: ✖️`mint`, ✖️`transfer`
-- **Runes**
-    - [ ] rune-stone: 
-    - [x] rune-alpha: ✔️`etching`(deploy), ✔️`edicts`(transfer), ✔️`mint`
 
 > Note: 
 >1. It's only scan(decode) protocols stored in raw transaction data, not include the whole indexing data. So the `common` transaction depend on indexing data which marked as `✖️` will not be included.
@@ -66,6 +65,8 @@ cargo build --release
 ## Output
 - **local jsonl file**: the output `jsonl` format is a nested line structures json, more details can be found at: [docs/data-structure.md](docs/data-structure.md)
 - **database postgres**: save the event data to postgres.
+
+
 
 ## Reference
 - https://github.com/ordinals/ord
