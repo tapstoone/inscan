@@ -28,11 +28,13 @@ A [Rust](https://www.rust-lang.org/) tool that can decode/index inscription even
 >2. Currently, the protocols only perform basic checks and do not perform strict verification. It should not used in production environments.
 
 ## Install
+Inscan is built on rust, you must install rust on your computer before compiling.
 ```
-git clone 
+git clone git@github.com:satpoint-io/inscan.git
 cd inscan
 cargo build --release
 ```
+Once built, the inscan binary can be found at `./target/release/inscan`
 
 
 ## Usage
@@ -58,13 +60,13 @@ cargo build --release
     ```
 4. Index brc20 and save to postgres
     ```bash
-    inscan -u devnet -w devnet --protocol ord-brc20 --out-db postgres://postgres:postgres@localhost/postgres \
+    inscan -u devnet -w devnet --protocol ord-brc20 --out-db postgres://postgres:postgres@localhost:5432/postgres \
         index --start 838266
     ```
 
 ## Output
 - **local jsonl file**: the output `jsonl` format is a nested line structures json, more details can be found at: [docs/data-structure.md](docs/data-structure.md)
-- **database postgres**: save the event data to postgres.
+- **database postgres**: save the event data to postgres. you need create table in postgres by [sql/db_init.sql](sql/db_init.sql) before execuate.
 
 The ouput data json format contain the following fields, you can get the detail protocol events data with `paylaod` field:
 
