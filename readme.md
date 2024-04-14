@@ -68,7 +68,7 @@ cargo build --release
 
 The ouput data json format contain the following fields, you can get the detail protocol events data with `paylaod` field:
 
-```json
+```jsonc
 {
     "blocktime":1712693506, //the block time
     "height":838501,        //the block height
@@ -81,9 +81,8 @@ The ouput data json format contain the following fields, you can get the detail 
         "p": "brc-20",
         "tick": "ombi"
     }
+// ...
 }
-...
-
 ```
 
 
