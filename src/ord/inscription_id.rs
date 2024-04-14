@@ -18,9 +18,9 @@ use{
     hashes::Hash,
   },
 
-  ordinals::DeserializeFromStr,
   std::fmt::{self, Display, Formatter},
   std::str::{FromStr},
+  crate::deserialize_from_str::DeserializeFromStr,
 };
 
 #[derive(Debug, PartialEq, Copy, Clone, Hash, Eq, PartialOrd, Ord)]

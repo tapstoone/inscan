@@ -399,7 +399,7 @@ fn decode_atom_others(inscription: Inscription)->Result<serde_json::Value>{
     let payload_value: ciborium::Value = ciborium::de::from_reader(&body_string[..])?; //TODO: get the diagnostic notation result
     // println!("\n>>> atomicals ciborium::Value: {:?}", payload_value);
     let jsons = cbor_to_json(payload_value);
-    println!("{:?}", jsons);
+    // println!("{:?}", jsons);
     // check if request_realm and request_subrealm in keys
     let request_realm = &jsons["args"]["request_realm"];
     let request_subrealm = &jsons["args"]["request_subrealm"];
