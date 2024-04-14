@@ -18,7 +18,7 @@ pub struct Cli {
     #[arg(short='w', long, required=true)]
     pub rpc_pass: String,
 
-    /// the protocols to extract,
+    /// the protocols[all,atom-arc20,atom-relam,atom-nft,atom-others,stamp-src20,rune-stone,rune-alpha,ord-brc20,ord-brc100,ord-brc420,ord-bitmap,ord-sns,ord-tap,ord] to extract,
     #[arg(short='p', long, default_value="all")]
     pub protocol: String,
 

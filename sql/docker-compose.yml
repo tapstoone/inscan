@@ -1,0 +1,18 @@
+version: '3.9'
+services:
+  postgres-inscan:
+    image: postgres:16.1
+    hostname: postgres
+    ports:
+      - 5434:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - metanet1
+    volumes:
+      - ./pg-data:/var/lib/postgresql/data
+networks:
+  metanet1:
+    driver: bridge
