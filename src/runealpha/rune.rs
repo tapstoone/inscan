@@ -2,7 +2,8 @@ use super::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::str::FromStr;
 use std::fmt::{self, Display, Formatter};
-use ordinals::{DeserializeFromStr, Height};
+use ordinals::{Height};
+use deserialize_from_str::DeserializeFromStr;
 use chain::Chain;
 use bitcoin::{
   blockdata::{

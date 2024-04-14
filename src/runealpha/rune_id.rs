@@ -2,7 +2,6 @@ use {super::*, std::num::TryFromIntError};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
-use ordinals::{DeserializeFromStr};
 use anyhow::{self, Error};
 
 #[derive(Debug, PartialEq, Copy, Clone, Hash, Eq, Ord, PartialOrd)]

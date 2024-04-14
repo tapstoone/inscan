@@ -1,6 +1,7 @@
 use {
     crate::ord::{self, Inscription, InscriptionId, ParsedEnvelope},
     crate::runealpha::{self, Runestone as Runealpha},
+    ordinals::Runestone,
     anyhow::{Error, Ok, Result},
     base64,
     bitcoin::{
@@ -29,10 +30,10 @@ use {
 };
 
 // note: the ord include brc20,brc420,stamp... so the we should iter those protocol first, if those protocol return value, then skip to next txid
-const SUPPORT_PROTOCOLS: [&str; 13] = [
+const SUPPORT_PROTOCOLS: [&str; 14] = [
         "atom-arc20", "atom-relam", "atom-nft",  "atom-others",
         "stamp-src20",
-        "rune-alpha",
+        "rune-stone", "rune-alpha",
         "ord-brc20", "ord-brc100", "ord-brc420", "ord-bitmap", "ord-sns", "ord-tap", "ord"
     ];
 
@@ -399,7 +400,7 @@ fn decode_atom_others(inscription: Inscription)->Result<serde_json::Value>{
     let payload_value: ciborium::Value = ciborium::de::from_reader(&body_string[..])?; //TODO: get the diagnostic notation result
     // println!("\n>>> atomicals ciborium::Value: {:?}", payload_value);
     let jsons = cbor_to_json(payload_value);
-    println!("{:?}", jsons);
+    // println!("{:?}", jsons);
     // check if request_realm and request_subrealm in keys
     let request_realm = &jsons["args"]["request_realm"];
     let request_subrealm = &jsons["args"]["request_subrealm"];
@@ -476,11 +477,15 @@ pub fn decode_stamp_src20(rawtx: &Transaction) ->Result<serde_json::Value> {
     // Ok("aaa".to_string())
 }
 
-// fn decode_rune_stone(rawtx: &Transaction)->Result<String>{
-//     let aa = Runestone::from_transaction(rawtx);
-//     println!("rune stone: {:?}",aa);
-//     Ok("t".to_lowercase())
-// }
+fn decode_rune_stone(rawtx: &Transaction)->Result<serde_json::Value>{
+    let runestone = Runestone::decipher(&rawtx);
+    if runestone.is_some(){
+        return Ok(serde_json::to_value(runestone)?)
+    }
+    else{
+        Err(BRC20Error::ContentBodyNull.into())
+    }
+}
 
 fn decode_rune_alpha(rawtx: &Transaction)->Result<serde_json::Value>{
     // let rune = Runealpha::from_transaction(rawtx).ok_or("name");
@@ -683,12 +688,15 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
                 Err(err) => {}
             }
         }
-        // "rune-stone" =>{
-        //     match decode_rune_stone(&rawtx) {
-        //         std::result::Result::Ok(event)=>println!("{:?}: {:?}", txid, event),
-        //         Err(err) => {}
-        //     }
-        // }
+        "rune-stone" =>{
+            match decode_rune_stone(&rawtx) {
+                std::result::Result::Ok(event) => {
+                    events.push(serde_json::json!({"protocol":"rune-stone", "payload":event}));
+                },
+                Err(err) => {}
+                // std::result::Result::Ok(event)=>println!("{:?}: {:?}", txid, event),
+            }
+        }
         // "rune-alpha" => {
         //     match decode_rune_alpha(&rawtx) {
         //         std::result::Result::Ok(event) => {
@@ -787,7 +795,7 @@ pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
                 blocktime: None,
                 txhash: txid.to_string(),
                 txindex: None,
-                protocol: evt.get("protocol").unwrap().to_string(),
+                protocol: String::from(evt["protocol"].as_str().unwrap()),
                 payload: evt.get("payload").unwrap().clone()
             };
             let _ = write_jsonl(&event, output);
@@ -839,7 +847,7 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
                     blocktime: Some(timestamp as i32),
                     txhash: txid.to_string(),
                     txindex: Some(idx.try_into().unwrap()),
-                    protocol: evt.get("protocol").unwrap().to_string().clone(),
+                    protocol: String::from(evt["protocol"].as_str().unwrap()),
                     payload: evt.get("payload").unwrap().clone()
                 };
                 if output.starts_with("postgres://"){
