@@ -29,7 +29,7 @@ A [Rust](https://www.rust-lang.org/) tool that can decode/index inscription even
 
 ## Install
 Inscan is built on rust, you must install rust on your computer before compiling.
-```
+``` bash
 git clone git@github.com:satpoint-io/inscan.git
 cd inscan
 cargo build --release
