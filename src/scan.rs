@@ -30,10 +30,10 @@ use {
 };
 
 // note: the ord include brc20,brc420,stamp... so the we should iter those protocol first, if those protocol return value, then skip to next txid
-const SUPPORT_PROTOCOLS: [&str; 13] = [
+const SUPPORT_PROTOCOLS: [&str; 14] = [
         "atom-arc20", "atom-relam", "atom-nft",  "atom-others",
         "stamp-src20",
-        "rune-alpha",
+        "rune-stone", "rune-alpha",
         "ord-brc20", "ord-brc100", "ord-brc420", "ord-bitmap", "ord-sns", "ord-tap", "ord"
     ];
 
@@ -795,7 +795,7 @@ pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
                 blocktime: None,
                 txhash: txid.to_string(),
                 txindex: None,
-                protocol: evt.get("protocol").unwrap().to_string(),
+                protocol: String::from(evt["protocol"].as_str().unwrap()),
                 payload: evt.get("payload").unwrap().clone()
             };
             let _ = write_jsonl(&event, output);
@@ -847,7 +847,7 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
                     blocktime: Some(timestamp as i32),
                     txhash: txid.to_string(),
                     txindex: Some(idx.try_into().unwrap()),
-                    protocol: evt.get("protocol").unwrap().to_string().clone(),
+                    protocol: String::from(evt["protocol"].as_str().unwrap()),
                     payload: evt.get("payload").unwrap().clone()
                 };
                 if output.starts_with("postgres://"){
