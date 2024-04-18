@@ -1,4 +1,5 @@
 
+use futures::future::ok;
 use inscan::cli;
 use inscan::scan;
 
@@ -6,15 +7,25 @@ use {
     std::process::exit,
     clap::{Parser, Subcommand},
     bitcoincore_rpc::{Auth, Client},
-    bitcoin::{Txid, hashes::Hash, Transaction}
+    bitcoin::{Txid, hashes::Hash, Transaction},
+    jsonrpc::minreq_http::MinreqHttpTransport,
 };
 
 fn create_connection(host: &String, user: String, pass: String)-> Result<Client, bitcoincore_rpc::Error>{
-    let rpc = match Client::new(host, Auth::UserPass(user,pass)) {
-        Ok(rpc) => rpc,
-        Err(err) => return Err(err),
-    };
-    Ok(rpc)
+    // let rpc = match Client::new(host, Auth::UserPass(user,pass)) {
+    //     Ok(rpc) => rpc,
+    //     Err(err) => return Err(err),
+    // };
+    // Ok(rpc)
+
+    let t = MinreqHttpTransport::builder()
+        .url(host)
+        .expect("parse url")
+        .basic_auth(user, Some(pass))
+        .build();
+    let json_client = jsonrpc::Client::with_transport(t);
+    let btc_rpc_client = bitcoincore_rpc::Client::from_jsonrpc(json_client);
+    Ok(btc_rpc_client)
 }
 
 fn main() {

@@ -1212,13 +1212,13 @@ dependencies = [
  "futures",
  "hex",
  "http",
- "jsonrpc 0.17.0",
  "lazy_static",
  "mp4",
- "ord-bitcoincore-rpc",
  "ordinals",
  "regex",
  "rust-crypto",
+ "satpoint-bitcoincore-rpc",
+ "satpoint-jsonrpc",
  "serde",
  "serde_json",
  "sha3",
@@ -1270,28 +1270,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29c15563dc2726973df627357ce0c9ddddbea194836909d655df6a75d2cf296d"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jsonrpc"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8128f36b47411cd3f044be8c1f5cc0c9e24d1d1bfdc45f0a57897b32513053f2"
-dependencies = [
- "base64 0.13.1",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "jsonrpc"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a26d9104d516092f092d97448787505881fdb6518293b2d6500bf9c180c839dd"
-dependencies = [
- "base64 0.13.1",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -1404,6 +1382,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d811f3e15f28568be3407c8e7fdb6514c1cda3cb30683f15b6a1a1dc4ea14a7"
 dependencies = [
  "adler",
+]
+
+[[package]]
+name = "minreq"
+version = "2.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00a000cf8bbbfb123a9bdc66b61c2885a4bb038df4f2629884caafabeb76b0f9"
+dependencies = [
+ "log",
+ "once_cell",
+ "rustls",
+ "rustls-webpki",
+ "serde",
+ "serde_json",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -1521,32 +1514,6 @@ name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
-
-[[package]]
-name = "ord-bitcoincore-rpc"
-version = "0.17.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16b622f69d68d7201d5186615978aca36ceb7e7c57d7771491d3e261c64ff4d8"
-dependencies = [
- "bitcoin-private",
- "jsonrpc 0.14.1",
- "log",
- "ord-bitcoincore-rpc-json",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "ord-bitcoincore-rpc-json"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bb35088f918c775bc27fa79e372d034892b216fb7900aeedd6e06654879ad33"
-dependencies = [
- "bitcoin",
- "bitcoin-private",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "ordinals"
@@ -1848,6 +1815,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
+name = "ring"
+version = "0.17.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c17fa4cb658e3583423e915b9f3acc01cceaee1860e33d59ebae66adc3a2dc0d"
+dependencies = [
+ "cc",
+ "cfg-if",
+ "getrandom",
+ "libc",
+ "spin 0.9.8",
+ "untrusted",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "rsa"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1929,16 +1911,86 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls"
+version = "0.21.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9d5a6813c0759e4609cd494e8e725babae6a2ca7b62a5536a13daaec6fcb7ba"
+dependencies = [
+ "log",
+ "ring",
+ "rustls-webpki",
+ "sct",
+]
+
+[[package]]
+name = "rustls-webpki"
+version = "0.101.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b6275d1ee7a1cd780b64aca7726599a1dbc893b1e64144529e55c3c2f745765"
+dependencies = [
+ "ring",
+ "untrusted",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e86697c916019a8588c99b5fac3cead74ec0b4b819707a682fd4d23fa0ce1ba1"
 
 [[package]]
+name = "satpoint-bitcoincore-rpc"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "011619577538575ca46652fc951d3dab24d4f65bdf95a12d4eab7933832575a2"
+dependencies = [
+ "bitcoin-private",
+ "log",
+ "satpoint-bitcoincore-rpc-json",
+ "satpoint-jsonrpc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "satpoint-bitcoincore-rpc-json"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a6c2c58714e1f042c28a80397b8cc2dfab2a3ce28c8e460fb7671ad5b79fd51"
+dependencies = [
+ "bitcoin",
+ "bitcoin-private",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "satpoint-jsonrpc"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fa0b418d584f3f13672dcee577b0adbd4760d1eedb9a06328ae83c72232fde4"
+dependencies = [
+ "base64 0.13.1",
+ "minreq",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "sct"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da046153aa2352493d6cb7da4b6e5c0c057d8a1d0a9aa8560baffdd945acd414"
+dependencies = [
+ "ring",
+ "untrusted",
+]
 
 [[package]]
 name = "secp256k1"
@@ -2548,6 +2600,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
 
 [[package]]
+name = "untrusted"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
 name = "url"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2687,6 +2745,12 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "webpki-roots"
+version = "0.25.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 
 [[package]]
 name = "whoami"

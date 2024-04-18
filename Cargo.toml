@@ -13,14 +13,14 @@ ordinals = { version = "0.0.7", path = "crates/ordinals" }
 # ord_inscriptions = { version = "0.1.0", path = "crates/inscriptions" }
 anyhow = { version = "1.0.56", features = ["backtrace"] }
 bitcoin = { version = "0.30.1", features = ["rand"] }
-ord-bitcoincore-rpc = "0.17.2" #use this instead of bitcoincore-rpc, otherwise there is an import conflict with bitcoin
+satpoint-jsonrpc = { version = "0.16.1", features = ["minreq_http"]}
+satpoint-bitcoincore-rpc = {version = "0.17.2"}
 bitcoin_hashes = "0.12.0"
 brotli = "3.4.0"
 ciborium = "0.2.2"
 clap = { version = "4.5.2", features = ["derive"] }
 hex = "0.4.3"
 http = "1.1.0"
-jsonrpc = "0.17.0"
 rust-crypto = "0.2.36"
 serde = "1.0.197"
 mp4 = "0.14.0"
@@ -43,3 +43,6 @@ path = "src/bin/main.rs"
 [lib]
 name = "inscan"
 path = "src/lib.rs"
+
+[profile.release]
+debug = true
