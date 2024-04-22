@@ -1,32 +1,25 @@
 use {
-    crate::ord::{self, Inscription, InscriptionId, ParsedEnvelope},
-    crate::runealpha::{self, Runestone as Runealpha},
-    ordinals::Runestone,
-    anyhow::{Error, Ok, Result},
-    base64,
+    crate::{ord::{self, Inscription, InscriptionId, ParsedEnvelope}, 
+    runealpha::{self, Runestone as Runealpha}}, anyhow::{Error, Ok, Result}, 
+    base64, 
     bitcoin::{
-        block,
-        blockdata::{opcodes::all::OP_CHECKMULTISIG, script::Instruction},
-        Transaction, Txid,
-    },
-    bitcoincore_rpc::{Client, RpcApi},
-    ciborium,
-    crypto::{rc4::Rc4, symmetriccipher::SynchronousStreamCipher},
-    serde::{Deserialize, Serialize},
-    serde_json::{self, Value},
+        address::Address, block, 
+        blockdata::{opcodes::all::OP_CHECKMULTISIG, script::Instruction}, 
+        psbt::raw, Network, OutPoint, Transaction, TxIn, Txid
+    }, 
+    bitcoincore_rpc::{Client, RpcApi}, 
+    chrono::Local, 
+    ciborium, 
+    crypto::{rc4::Rc4, symmetriccipher::SynchronousStreamCipher}, 
+    futures::executor::block_on, 
+    ordinals::{Artifact, Runestone}, 
+    serde::{Deserialize, Serialize}, 
+    serde_json::{self, json, Value}, 
+    sqlx::{postgres::PgPoolOptions, QueryBuilder},
     std::{
-        iter::repeat,
-        str::{self, FromStr},
-        fs::File,
-        io::{BufWriter, Write},
-        fs::OpenOptions,
-        thread,
-        time::Duration,
-    },
-    thiserror,
-    sqlx::postgres::PgPoolOptions,
-    futures::executor::block_on,
-    chrono::Local,
+        fs::{File, OpenOptions}, io::{BufWriter, Write}, iter::repeat, str::{self, FromStr}, thread, time::Duration
+    }, 
+    thiserror
 };
 
 // note: the ord include brc20,brc420,stamp... so the we should iter those protocol first, if those protocol return value, then skip to next txid
@@ -487,6 +480,99 @@ fn decode_rune_stone(rawtx: &Transaction)->Result<serde_json::Value>{
     }
 }
 
+fn get_address_by_index(rawtx: &Transaction, index:u32){
+
+}
+
+#[derive(Serialize, Eq, PartialEq, Deserialize, Debug)]
+struct RuneEvent {
+    payload: serde_json::Value,
+    vin: Vec<serde_json::Value>,
+    vout: Vec<serde_json::Value>
+}
+
+fn decode_rune_stone_detail(rawtx: &Transaction)->Result<RuneEvent>{
+    let runestone = Runestone::decipher(&rawtx);
+    let mut inputs:Vec<serde_json::Value> = Vec::new();
+    let mut outputs:Vec<serde_json::Value> = Vec::new();
+
+    if runestone.is_some(){
+        // all input utxo
+        for item_input in rawtx.input.iter(){
+            let previous_outpoint = item_input.previous_output;
+            inputs.push(json!({"txid": previous_outpoint.txid, "vout":previous_outpoint.vout}));
+        }
+
+        for (idx, txout) in rawtx.output.iter().enumerate(){
+            if txout.script_pubkey.is_op_return(){continue;}
+            let address = Address::from_script(&txout.script_pubkey, Network::Bitcoin)?;
+            outputs.push(json!({"vout": idx, "address": address}));
+        }
+
+        let result = RuneEvent{
+            payload: serde_json::to_value(&runestone)?,
+            vin: inputs,
+            vout: outputs
+        };
+        // println!("{:?}", result);
+        return Ok(result);
+    }
+    else{
+        Err(BRC20Error::ContentBodyNull.into())
+    }
+    // let mut outpoints = Vec::new();
+    // match &runestone {
+    //     Some(x) => {
+    //         match x {
+    //             Artifact::Cenotaph(cenotaph)=>{}
+    //             Artifact::Runestone(runestone)=>{
+    //                 // edicts
+    //                 if !runestone.edicts.is_empty(){ //if not empty then get the ouput index and address
+    //                     for item_edit in &runestone.edicts{
+    //                         let outindex = item_edit.output;
+    //                         // get address from outindex
+    //                         let txout = &rawtx.output[outindex as usize];
+    //                         let address = Address::from_script(&txout.script_pubkey, Network::Testnet)?;
+    //                         println!("{:?}|{:?}|{:?}", rawtx.txid(), outindex, address);
+    //                         // outpoints.extend(json!({
+    //                         //     outindex.to_string(): address
+    //                         // }))
+    //                     }
+    //                 }
+
+    //                 // etching premine
+    //                 if let Some(etching) = &runestone.etching { //transfer to pointer or the first none op_return output
+    //                     if let Some(premine) = etching.premine {
+    //                         println!("Premine value: {:?}", premine);
+                            
+    //                     } else {
+    //                         println!("Premine field is None");
+    //                     }
+                        
+    //                 } else {
+    //                     println!("Etching field is None");
+    //                 }
+
+    //                 // mint
+
+                    
+    //             }
+    //         }
+    //     },
+    //     None => {}
+    // }
+
+
+
+
+    // if true {
+    //     return Ok(serde_json::to_value(&runestone)?)
+    // }
+    // else{
+    //     Err(BRC20Error::ContentBodyNull.into())
+    // }
+}
+
 fn decode_rune_alpha(rawtx: &Transaction)->Result<serde_json::Value>{
     // let rune = Runealpha::from_transaction(rawtx).ok_or("name");
     let rune = Runealpha::from_transaction(rawtx).ok_or_else(|| BRC20Error::ContentTypeNull)?;
@@ -689,11 +775,12 @@ pub fn decode_tx(rpc: &Client, txid: &Txid, protocol: &str) -> Vec<serde_json::V
             }
         }
         "rune-stone" =>{
-            match decode_rune_stone(&rawtx) {
+            match decode_rune_stone_detail(&rawtx) {
                 std::result::Result::Ok(event) => {
-                    events.push(serde_json::json!({"protocol":"rune-stone", "payload":event}));
+                    events.push(serde_json::json!({"protocol":"rune-stone", "payload": event.payload, "vin": event.vin, "vout":event.vout}));
                 },
                 Err(err) => {}
+                // Err(err) => {println!("{:?}", err)}
                 // std::result::Result::Ok(event)=>println!("{:?}: {:?}", txid, event),
             }
         }
@@ -721,7 +808,9 @@ struct DecodedEvent{
     txhash: String,
     txindex: Option<i32>,
     protocol: String,
-    payload: serde_json::Value
+    payload: serde_json::Value,
+    vin: serde_json::Value,
+    vout: serde_json::Value
 }
 
 async fn save_event_to_pg(event: &DecodedEvent, conn: &str) -> Result<(), sqlx::Error> {
@@ -734,15 +823,52 @@ async fn save_event_to_pg(event: &DecodedEvent, conn: &str) -> Result<(), sqlx::
     // .await
     // .expect("Failed to connect to the database");
 
-    sqlx::query("INSERT INTO public.inscan_events (height, blocktime, txhash, txindex, protocol, payload) VALUES ($1, $2, $3, $4, $5, $6)")
+    sqlx::query("INSERT INTO public.inscan_rune_events (height, blocktime, txhash, txindex, protocol, payload, vin, vout) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
         .bind(event.height)
         .bind(event.blocktime)
         .bind(&event.txhash)
         .bind(event.txindex)
         .bind(&event.protocol)
         .bind(&event.payload)
+        .bind(&event.vin)
+        .bind(&event.vout)
         .execute(&pool)
         .await?;
+
+    std::result::Result::Ok(())
+}
+
+async fn save_event_to_pg_batch(events: &Vec<DecodedEvent>, conn: &str) -> Result<(), sqlx::Error> {
+    let pool = PgPoolOptions::new()
+    .max_connections(5)
+    .connect(conn)
+    .await?;
+
+    let heights: Vec<Option<i64>> = events.iter().map(|u| u.height.clone()).collect();
+    let blocktimes: Vec<Option<i32>> = events.iter().map(|u| u.blocktime.clone()).collect();
+    let txhashs: Vec<String> = events.iter().map(|u| u.txhash.clone()).collect();
+    let txindexs: Vec<Option<i32>> = events.iter().map(|u| u.txindex.clone()).collect();
+    let protocols: Vec<String> = events.iter().map(|u| u.protocol.clone()).collect();
+    let payloads: Vec<serde_json::Value> = events.iter().map(|u| u.payload.clone()).collect();
+    let vins: Vec<serde_json::Value> = events.iter().map(|u| u.vin.clone()).collect();
+    let vouts: Vec<serde_json::Value> =  events.iter().map(|u| u.vout.clone()).collect();
+
+    sqlx::query(
+        "
+            INSERT INTO public.inscan_rune_events (height, blocktime, txhash, txindex, protocol, payload, vin, vout) 
+            SELECT * FROM UNNEST($1::integer[], $2::integer[], $3::VARCHAR[], $4::integer[], $5::VARCHAR[], $6::JSONB[], $7::JSONB[], $8::JSONB[])
+        "
+    )
+    .bind(heights)
+    .bind(blocktimes)
+    .bind(txhashs)
+    .bind(txindexs)
+    .bind(protocols)
+    .bind(payloads)
+    .bind(vins)
+    .bind(vouts)
+    .execute(&pool)
+    .await?;
 
     std::result::Result::Ok(())
 }
@@ -796,7 +922,9 @@ pub fn run_txs(rpc: &Client, txids: &String, protocol: &str, output:&String) {
                 txhash: txid.to_string(),
                 txindex: None,
                 protocol: String::from(evt["protocol"].as_str().unwrap()),
-                payload: evt.get("payload").unwrap().clone()
+                payload: evt.get("payload").unwrap().clone(),
+                vin: evt.get("vin").unwrap().clone(),
+                vout: evt.get("vout").unwrap().clone(),
             };
             let _ = write_jsonl(&event, output);
         }
@@ -818,6 +946,7 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
         vec![block_number.parse::<u64>().unwrap()]
     };
 
+    let mut events = vec![];
     // iterate over the blocks
     for block in blocks {
         let block_hash = rpc.get_block_hash(block).unwrap();
@@ -848,19 +977,30 @@ pub fn run_blocks(rpc: &Client, block_number: &String, protocol: &str, output:&S
                     txhash: txid.to_string(),
                     txindex: Some(idx.try_into().unwrap()),
                     protocol: String::from(evt["protocol"].as_str().unwrap()),
-                    payload: evt.get("payload").unwrap().clone()
+                    payload: evt.get("payload").unwrap().clone(),
+                    vin: evt.get("vin").unwrap().clone(),
+                    vout: evt.get("vout").unwrap().clone(),
                 };
                 if output.starts_with("postgres://"){
-                    let pg = block_on(save_event_to_pg(&event, &output));
-                    match pg {
-                        std::result::Result::Ok(a)=>{},
-                        Err(err)=>{println!("{:?}", err)}
-                    }
+                    // let pg = block_on(save_event_to_pg(&event, &output));
+                    // match pg {
+                    //     std::result::Result::Ok(a)=>{},
+                    //     Err(err)=>{println!("{:?}", err)}
+                    // }
+                    events.push(event);
                 }else{
                     let _ = write_jsonl(&event, output);
 
                 }
             }
+        }
+    }
+
+    if output.starts_with("postgres://"){
+        let pg = block_on(save_event_to_pg_batch(&events, &output));
+        match pg {
+            std::result::Result::Ok(a)=>{},
+            Err(err)=>{println!("{:?}", err)}
         }
     }
 }
